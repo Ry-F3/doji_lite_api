@@ -1,131 +1,77 @@
-![CI logo](https://codeinstitute.s3.amazonaws.com/fullstack/ci_logo_small.png)
+## Django rest framework setup
 
-Welcome Rhys Few,
+<br>
 
-This is the Code Institute student template for Gitpod. We have preinstalled all of the tools you need to get started. It's perfectly ok to use this template as the basis for your project submissions.
+Please use this template: [Code Institute Gitpod Full Template](https://github.com/Code-Institute-Org/ci-full-template)
 
-You can safely delete this README.md file or change it for your own project. Please do read it at least once, though! It contains some important information about Gitpod and the extensions we use. Some of this information has been updated since the video content was created. The last update to this file was: **June 18, 2024**
+<br>
 
-## Gitpod Reminders
+#### Development workspace setup
 
-To run a frontend (HTML, CSS, Javascript only) application in Gitpod, in the terminal, type:
+| Step | Description                                                                  | Command                                          |
+|------|------------------------------------------------------------------------------|--------------------------------------------------|
+| 1    | Install Django version less than 4                                           | `pip3 install 'django<4'`                        |
+| 2    | Create a Django project                                                      | `django-admin startproject project_name .`       |
+| 3    | Install Cloudinary Storage                                                   | `pip install django-cloudinary-storage`          |
+| 4    | Install Pillow                                                                | `pip install Pillow`                             |
+| 5    | Set up Cloudinary API Key                                                    | Create an `env.py` file with Cloudinary API key  |
+| 6    | Update Django Settings                                                       | Add cloudinary and cloudinary_storage to `INSTALLED_APPS` in settings.py               |
+| 7    | Specify Allowed Hosts                                                        | Add allowed hosts to `settings.py`               |
+| 8    | Create a Django App                                                          | `python3 manage.py startapp app_name` e.g profiles,  <br> [models.py](https://github.com/Ry-F3/doji_lite_api/blob/main/profiles/models.py), <br> [views.py](https://github.com/Ry-F3/doji_lite_api/blob/main/profiles/models.py), <br>  [serializers.py](https://github.com/Ry-F3/doji_lite_api/blob/main/profiles/models.py), <br>  [permissons.py](https://github.com/Ry-F3/doji_lite_api/blob/main/doji_lite_api/permissions.py), <br> [urls.py](https://github.com/Ry-F3/doji_lite_api/blob/main/profiles/urls.py)        |
+| 9    | Make Migrations                                                              | `python3 manage.py makemigrations`               |
+| 10   | Apply Migrations                                                             | `python3 manage.py migrate`                      |
+| 11   | Install Django REST Framework                                                | `pip install djangorestframework`                |
+| 12   | Freeze requirements into requirements.txt file                               | `pip freeze > requirements.txt`                  |
+| 13   | Run the Django development server                                            | `python3 manage.py runserver`                    |
 
-`python3 -m http.server`
+<br>
 
-A blue button should appear to click: _Make Public_,
+#### JWT tokens, user registration, and cookies setup
 
-Another blue button should appear to click: _Open Browser_.
+| Step | Description                                                                                                    | Command                                          |
+|------|----------------------------------------------------------------------------------------------------------------|--------------------------------------------------|
+| 1    | Install `dj-rest-auth` package for JWT token authentication                                                   | `pip3 install dj-rest-auth==2.1.9`              |
+| 2    | Add `rest_framework.authtoken` and `dj_rest_auth` to `INSTALLED_APPS`                                         | Add the apps to `INSTALLED_APPS` in `settings.py`|
+| 3    | Include `dj_rest_auth.urls` in the main URL patterns list                                                        | Add `path('dj-rest-auth/', include('dj_rest_auth.urls'))` to `urls.py`                                        |
+| 4    | Migrate the database schema for `dj-rest-auth`                                                                  | `python3 manage.py migrate`                     |
+| 5    | Install `dj-rest-auth` with social authentication support                                                       | `pip install dj-rest-auth[with_social]==5.1.0`       |
+| 6    | Add necessary apps for user registration to `INSTALLED_APPS`                                                     | Add apps to `INSTALLED_APPS` in `settings.py` including:<br>`'django.contrib.sites',`<br>`'allauth',`<br>`'allauth.account',`<br>`'allauth.socialaccount',`<br>`'dj_rest_auth.registration'`|
+| 7   | Add `allauth.account.middleware.AccountMiddleware` to `MIDDLEWARE`                                             | Add `'allauth.account.middleware.AccountMiddleware'` to `MIDDLEWARE` in `settings.py`|
+| 8    | Set the `SITE_ID` to 1                                                                                         | Set `SITE_ID = 1` in `settings.py`              |
+| 9    | Include `dj_rest_auth.registration.urls` in the main URL patterns list                                         | Add `path('dj-rest-auth/registration/', include('dj_rest_auth.registration.urls'))` to `urls.py`           |
+| 10    | Install `djangorestframework-simplejwt` package for JWT token support                                           | `pip install djangorestframework-simplejwt`     |
+| 11  | Configure DRF authentication settings based on environment (development or production)                         | Update `REST_FRAMEWORK` settings in `settings.py` as follows: [Click here](settings.md)|
+| 12   | Enable token authentication in DRF by setting `REST_USE_JWT` to `True`                                          | Set `REST_USE_JWT = True` in `settings.py`      |
+| 13   | Ensure JWT tokens are sent only over HTTPS by setting `JWT_AUTH_SECURE` to `True`                               | Set `JWT_AUTH_SECURE = True` in `settings.py`   |
+| 14   | Specify the name of the authentication cookie by setting `JWT_AUTH_COOKIE`                                      | Set `JWT_AUTH_COOKIE = 'my-app-auth'` in `settings.py`|
+| 15   | Specify the name of the refresh token cookie by setting `JWT_AUTH_REFRESH_COOKIE`                                | Set `JWT_AUTH_REFRESH_COOKIE = 'my-refresh-token'` in `settings.py`|
+| 16    | Freeze requirements into requirements.txt file                               | `pip freeze > requirements.txt`                  |
 
-To run a backend Python file, type `python3 app.py` if your Python file is named `app.py`, of course.
+#### env.py file
 
-A blue button should appear to click: _Make Public_,
+![env.py](/media/screenshots/env.py.jpg)
 
-Another blue button should appear to click: _Open Browser_.
+* Ensure to have the correct settings applied within settings.py file in order for the env.py to function correctly:
+  * [os_getenv.py]() *Use for reference*
+  * [imports.py]() *Use for reference*
 
-By Default, Gitpod gives you superuser security privileges. Therefore, you do not need to use the `sudo` (superuser do) command in the bash terminal in any of the lessons.
+#### Requesting user details 
 
-To log into the Heroku toolbelt CLI:
+| Step | Description                                                                                                    | Command                                          |
+|------|----------------------------------------------------------------------------------------------------------------|--------------------------------------------------|
+| 1    | Create a `serializer.py` file in the main project folder.                                                    | (Create the file manually)                       |
+| 2    | Add the following code to `serializer.py`.                                                                    | [Click here](settings.md)                             |
+|      |                                                                                                                |                                                   |
+| 3    | Add the settings to `settings.py`.                                                                            | [Click here](settings.md)                             |
+|      |                                                                                                                |                                                   |
+| 4    | Run the database migrations.                                                                                  | `python3 manage.py migrate`                      |
 
-1. Log in to your Heroku account and go to *Account Settings* in the menu under your avatar.
-2. Scroll down to the *API Key* and click *Reveal*
-3. Copy the key
-4. In Gitpod, from the terminal, run `heroku_config`
-5. Paste in your API key when asked
+<br>
 
-You can now use the `heroku` CLI program - try running `heroku apps` to confirm it works. This API key is unique and private to you, so do not share it. If you accidentally make it public, you can create a new one with _Regenerate API Key_.
+#### Setup <code>root_route</code>
 
-### Connecting your Mongo database
-
-- **Connect to Mongo CLI on a IDE**
-- navigate to your MongoDB Clusters Sandbox
-- click **"Connect"** button
-- select **"Connect with the MongoDB shell"**
-- select **"I have the mongo shell installed"**
-- choose **mongosh (2.0 or later)** for : **"Select your mongo shell version"**
-- choose option: **"Run your connection string in your command line"**
-- in the terminal, paste the copied code `mongo "mongodb+srv://<CLUSTER-NAME>.mongodb.net/<DBname>" --apiVersion 1 --username <USERNAME>`
-  - replace all `<angle-bracket>` keys with your own data
-- enter password _(will not echo **\*\*\*\*** on screen)_
-
-------
-
-## Release History
-
-We continually tweak and adjust this template to help give you the best experience. Here is the version history:
-
-**June 18, 2024,** Add Mongo back into template
-
-**June 14, 2024,** Temporarily remove Mongo until the key issue is resolved
-
-**May 28 2024:** Fix Mongo and Links installs
-
-**April 26 2024:** Update node version to 16
-
-**September 20 2023:** Update Python version to 3.9.17.
-
-**September 1 2021:** Remove `PGHOSTADDR` environment variable.
-
-**July 19 2021:** Remove `font_fix` script now that the terminal font issue is fixed.
-
-**July 2 2021:** Remove extensions that are not available in Open VSX.
-
-**June 30 2021:** Combined the P4 and P5 templates into one file, added the uptime script. See the FAQ at the end of this file.
-
-**June 10 2021:** Added: `font_fix` script and alias to fix the Terminal font issue
-
-**May 10 2021:** Added `heroku_config` script to allow Heroku API key to be stored as an environment variable.
-
-**April 7 2021:** Upgraded the template for VS Code instead of Theia.
-
-**October 21 2020:** Versions of the HTMLHint, Prettier, Bootstrap4 CDN and Auto Close extensions updated. The Python extension needs to stay the same version for now.
-
-**October 08 2020:** Additional large Gitpod files (`core.mongo*` and `core.python*`) are now hidden in the Explorer, and have been added to the `.gitignore` by default.
-
-**September 22 2020:** Gitpod occasionally creates large `core.Microsoft` files. These are now hidden in the Explorer. A `.gitignore` file has been created to make sure these files will not be committed, along with other common files.
-
-**April 16 2020:** The template now automatically installs MySQL instead of relying on the Gitpod MySQL image. The message about a Python linter not being installed has been dealt with, and the set-up files are now hidden in the Gitpod file explorer.
-
-**April 13 2020:** Added the _Prettier_ code beautifier extension instead of the code formatter built-in to Gitpod.
-
-**February 2020:** The initialisation files now _do not_ auto-delete. They will remain in your project. You can safely ignore them. They just make sure that your workspace is configured correctly each time you open it. It will also prevent the Gitpod configuration popup from appearing.
-
-**December 2019:** Added Eventyret's Bootstrap 4 extension. Type `!bscdn` in a HTML file to add the Bootstrap boilerplate. Check out the <a href="https://github.com/Eventyret/vscode-bcdn" target="_blank">README.md file at the official repo</a> for more options.
-
-------
-
-## FAQ about the uptime script
-
-**Why have you added this script?**
-
-It will help us to calculate how many running workspaces there are at any one time, which greatly helps us with cost and capacity planning. It will help us decide on the future direction of our cloud-based IDE strategy.
-
-**How will this affect me?**
-
-For everyday usage of Gitpod, it doesn’t have any effect at all. The script only captures the following data:
-
-- An ID that is randomly generated each time the workspace is started.
-- The current date and time
-- The workspace status of “started” or “running”, which is sent every 5 minutes.
-
-It is not possible for us or anyone else to trace the random ID back to an individual, and no personal data is being captured. It will not slow down the workspace or affect your work.
-
-**So….?**
-
-We want to tell you this so that we are being completely transparent about the data we collect and what we do with it.
-
-**Can I opt out?**
-
-Yes, you can. Since no personally identifiable information is being captured, we'd appreciate it if you let the script run; however if you are unhappy with the idea, simply run the following commands from the terminal window after creating the workspace, and this will remove the uptime script:
-
-```
-pkill uptime.sh
-rm .vscode/uptime.sh
-```
-
-**Anything more?**
-
-Yes! We'd strongly encourage you to look at the source code of the `uptime.sh` file so that you know what it's doing. As future software developers, it will be great practice to see how these shell scripts work.
-
----
-
-Happy coding!
+| Step | Description                                                                                                    | Command                                          |
+|------|----------------------------------------------------------------------------------------------------------------|--------------------------------------------------|
+| 1    | Create a `views.py` file in the main project folder.                                                          | (Create the file manually)                       |
+| 2    | Add a basic view for Django Rest Framework (DRF).                                                             | [Click here](https://github.com/Ry-F3/doji-lite-api/blob/main/doji_lite_api/views.py)                    |
+| 3    | Add the URL pattern for the root route and import views.                                                      | Add the following line to the top of the `urls.py` file:<br>`from .views import root_route`<br>Then, add the URL pattern:<br>`path('', root_route),`                      |
