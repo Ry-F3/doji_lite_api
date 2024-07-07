@@ -40,11 +40,11 @@ Please use this template: [Code Institute Gitpod Full Template](https://github.c
 | 8    | Set the `SITE_ID` to 1                                                                                         | Set `SITE_ID = 1` in `settings.py`              |
 | 9    | Include `dj_rest_auth.registration.urls` in the main URL patterns list                                         | Add `path('dj-rest-auth/registration/', include('dj_rest_auth.registration.urls'))` to `urls.py`           |
 | 10    | Install `djangorestframework-simplejwt` package for JWT token support                                           | `pip install djangorestframework-simplejwt`     |
-| 11  | Configure DRF authentication settings based on environment (development or production)                         | Update `REST_FRAMEWORK` settings in `settings.py` as follows: [Click here](settings.md)|
+| 11  | Configure DRF authentication settings based on environment (development or production)                         | Update `REST_FRAMEWORK` settings in `settings.py` as follows: [Click here](/settings_tutorial/rest_framework.py)|
 | 12   | Enable token authentication in DRF by setting `REST_USE_JWT` to `True`                                          | Set `REST_USE_JWT = True` in `settings.py`      |
 | 13   | Ensure JWT tokens are sent only over HTTPS by setting `JWT_AUTH_SECURE` to `True`                               | Set `JWT_AUTH_SECURE = True` in `settings.py`   |
 | 14   | Specify the name of the authentication cookie by setting `JWT_AUTH_COOKIE`                                      | Set `JWT_AUTH_COOKIE = 'my-app-auth'` in `settings.py`|
-| 15   | Specify the name of the refresh token cookie by setting `JWT_AUTH_REFRESH_COOKIE`                                | Set `JWT_AUTH_REFRESH_COOKIE = 'my-refresh-token'` in `settings.py`|
+| 15   | Specify the name of the refresh token cookie by setting `JWT_AUTH_REFRESH_COOKIE`                                | Set `JWT_AUTH_REFRESH_COOKIE = 'my-refresh-token'` in `settings.py`, [Click here](/settings_tutorial/jwt_token.py)|
 | 16    | Freeze requirements into requirements.txt file                               | `pip freeze > requirements.txt`                  |
 
 #### env.py file
@@ -52,8 +52,8 @@ Please use this template: [Code Institute Gitpod Full Template](https://github.c
 ![env.py](/media/screenshots/env.py.jpg)
 
 * Ensure to have the correct settings applied within settings.py file in order for the env.py to function correctly:
-  * [os_getenv.py]() *Use for reference*
-  * [imports.py]() *Use for reference*
+  * [os_getenv.py](/settings_tutorial/os_getenv.py) *Use for reference*
+  * [imports.py](/settings_tutorial/imports.py) *Use for reference*
 
 #### Requesting user details 
 
