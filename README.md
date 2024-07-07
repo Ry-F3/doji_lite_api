@@ -77,8 +77,6 @@ Please use this template: [Code Institute Gitpod Full Template](https://github.c
 |      |                                                                                                                |                                                   |
 | 4    | Run the database migrations.                                                                                  | `python3 manage.py migrate`                      |
 
-<br>
-
 #### Setup <code>root_route</code>
 
 | Step | Description                                                                                                    | Command                                          |
