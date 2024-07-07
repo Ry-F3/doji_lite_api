@@ -61,10 +61,10 @@ Please use this template: [Code Institute Gitpod Full Template](https://github.c
 |----------|----------------------------------------------------------------------|--------------------------------------------------------|
 | 1        | Install two packages to connect to an external database              | `pip3 install dj_database_url==0.5.0 psycopg2`          |
 | 2        | Add new import statements to `settings.py`                           | `import dj_database_url`                                |
-| 3        | Update the Databases section in `settings.py`                        | [click here](#)                                         |
+| 3        | Update the Databases section in `settings.py`                        | [click here](https://github.com/Ry-F3/doji_lite_api/blob/main/settings_tutorial/database.py)                                         |
 | 4        | Update `env.py` file with your specific PostgreSQL URL               | `os.environ['DATABASE_URL'] = "<your PostgreSQL URL here>"` |
 | 5        | Comment out `os.environ['DEV'] = '1'`                                | `ctr + /`                                               |
-| 6        | In `settings.py`, add a print statement to confirm database is connected | [click here](#)                                         |
+| 6        | In `settings.py`, add a print statement to confirm database is connected | [click here](https://github.com/Ry-F3/doji_lite_api/blob/main/settings_tutorial/database_print_statement.py)                                         |
 
 #### Requesting user details 
 
