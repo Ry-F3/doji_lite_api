@@ -15,7 +15,7 @@ Please use this template: [Code Institute Gitpod Full Template](https://github.c
 | 3    | Install Cloudinary Storage                                                   | `pip install django-cloudinary-storage`          |
 | 4    | Install Pillow                                                                | `pip install Pillow`                             |
 | 5    | Set up Cloudinary API Key                                                    | Create an `env.py` file with Cloudinary API key  |
-| 6    | Update Django Settings                                                       | Add cloudinary and cloudinary_storage to `INSTALLED_APPS` in settings.py               |
+| 6    | Update Django Settings                                                       | Add 'cloudinary' and 'cloudinary_storage' to `INSTALLED_APPS` in settings.py               |
 | 7    | Specify Allowed Hosts                                                        | Add allowed hosts to `settings.py`               |
 | 8    | Create a Django App                                                          | `python3 manage.py startapp app_name` e.g profiles,  <br> [models.py](https://github.com/Ry-F3/doji_lite_api/blob/main/profiles/models.py), <br> [views.py](https://github.com/Ry-F3/doji_lite_api/blob/main/profiles/views.py), <br>  [serializers.py](https://github.com/Ry-F3/doji_lite_api/blob/main/profiles/serializers.py), <br>  [permissons.py](https://github.com/Ry-F3/doji_lite_api/blob/main/doji_lite_api/permissions.py), <br> [urls.py](https://github.com/Ry-F3/doji_lite_api/blob/main/profiles/urls.py)        |
 | 9    | Make Migrations                                                              | `python3 manage.py makemigrations`               |
@@ -54,6 +54,17 @@ Please use this template: [Code Institute Gitpod Full Template](https://github.c
 * Ensure to have the correct settings applied within settings.py file in order for the env.py to function correctly:
   * [os_getenv.py](https://github.com/Ry-F3/doji_lite_api/blob/main/settings_tutorial/os_getenv.py) *Use for reference*
   * [imports.py](https://github.com/Ry-F3/doji_lite_api/blob/main/settings_tutorial/imports.py) *Use for reference*
+
+#### Connecting to a PostgreSQL Database
+
+| Step | Description                                                          | Command                                                |
+|----------|----------------------------------------------------------------------|--------------------------------------------------------|
+| 1        | Install two packages to connect to an external database              | `pip3 install dj_database_url==0.5.0 psycopg2`          |
+| 2        | Add new import statements to `settings.py`                           | `import dj_database_url`                                |
+| 3        | Update the Databases section in `settings.py`                        | [click here](#)                                         |
+| 4        | Update `env.py` file with your specific PostgreSQL URL               | `os.environ['DATABASE_URL'] = "<your PostgreSQL URL here>"` |
+| 5        | Comment out `os.environ['DEV'] = '1'`                                | `ctr + /`                                               |
+| 6        | In `settings.py`, add a print statement to confirm database is connected | [click here](#)                                         |
 
 #### Requesting user details 
 
