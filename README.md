@@ -59,7 +59,7 @@ Please use this template: [Code Institute Gitpod Full Template](https://github.c
 
 | Step | Description                                                                                                    | Command                                          |
 |------|----------------------------------------------------------------------------------------------------------------|--------------------------------------------------|
-| 1    | Create a `serializer.py` file in the main project folder.                                                    | (Create the file manually)                       |
+| 1    | Create a `serializer.py` file in the main project folder.                                                    | (Create the file manually in your main app)                       |
 | 2    | Add the following code to `serializer.py`.                                                                    | [Click here](settings.md)                             |
 |      |                                                                                                                |                                                   |
 | 3    | Add the settings to `settings.py`.                                                                            | [Click here](settings.md)                             |
@@ -72,6 +72,6 @@ Please use this template: [Code Institute Gitpod Full Template](https://github.c
 
 | Step | Description                                                                                                    | Command                                          |
 |------|----------------------------------------------------------------------------------------------------------------|--------------------------------------------------|
-| 1    | Create a `views.py` file in the main project folder.                                                          | (Create the file manually)                       |
+| 1    | Create a `views.py` file in the main project folder.                                                          | (Create the file manually in your main app)                       |
 | 2    | Add a basic view for Django Rest Framework (DRF).                                                             | [Click here](https://github.com/Ry-F3/doji-lite-api/blob/main/doji_lite_api/views.py)                    |
 | 3    | Add the URL pattern for the root route and import views.                                                      | Add the following line to the top of the `urls.py` file:<br>`from .views import root_route`<br>Then, add the URL pattern:<br>`path('', root_route),`                      |

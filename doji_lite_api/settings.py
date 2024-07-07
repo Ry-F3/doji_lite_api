@@ -42,6 +42,10 @@ if 'DEV' not in os.environ:
         'rest_framework.renderers.JSONRenderer',
     ]
 
+REST_AUTH_SERIALIZERS = {
+    'USER_DETAILS_SERIALIZER': 'doji_lite_api.serializers.CurrentUserSerializer'
+}
+
 REST_USE_JWT = True  # enable token auth
 JWT_AUTH_SECURE = True  # sent over https only
 JWT_AUTH_COOKIE = 'my-app-auth'  # declare cookie name access
