@@ -44,7 +44,7 @@ Please use this template: [Code Institute Gitpod Full Template](https://github.c
 | 12   | Enable token authentication in DRF by setting `REST_USE_JWT` to `True`                                          | Set `REST_USE_JWT = True` in `settings.py`      |
 | 13   | Ensure JWT tokens are sent only over HTTPS by setting `JWT_AUTH_SECURE` to `True`                               | Set `JWT_AUTH_SECURE = True` in `settings.py`   |
 | 14   | Specify the name of the authentication cookie by setting `JWT_AUTH_COOKIE`                                      | Set `JWT_AUTH_COOKIE = 'my-app-auth'` in `settings.py`|
-| 15   | Specify the name of the refresh token cookie by setting `JWT_AUTH_REFRESH_COOKIE`                                | Set `JWT_AUTH_REFRESH_COOKIE = 'my-refresh-token'` in `settings.py`, [Click here](https://github.com/Ry-F3/doji_lite_api/blob/main/settings_tutorial/jwt_token.py) |
+| 15   | Specify the name of the refresh token cookie by setting `JWT_AUTH_REFRESH_COOKIE`                                | Set `JWT_AUTH_REFRESH_COOKIE = 'my-refresh-token'` in `settings.py`: [Click here](https://github.com/Ry-F3/doji_lite_api/blob/main/settings_tutorial/jwt_token.py) |
 | 16    | Freeze requirements into requirements.txt file                               | `pip freeze > requirements.txt`                  |
 
 #### env.py file
@@ -52,8 +52,8 @@ Please use this template: [Code Institute Gitpod Full Template](https://github.c
 ![env.py](/media/screenshots/env.py.jpg)
 
 * Ensure to have the correct settings applied within settings.py file in order for the env.py to function correctly:
-  * [os_getenv.py](/settings_tutorial/os_getenv.py) *Use for reference*
-  * [imports.py](/settings_tutorial/imports.py) *Use for reference*
+  * [os_getenv.py](https://github.com/Ry-F3/doji_lite_api/blob/main/settings_tutorial/os_getenv.py) *Use for reference*
+  * [imports.py](https://github.com/Ry-F3/doji_lite_api/blob/main/settings_tutorial/imports.py) *Use for reference*
 
 #### Requesting user details 
 
