@@ -24,8 +24,6 @@ Please use this template: [Code Institute Gitpod Full Template](https://github.c
 | 12   | Freeze requirements into requirements.txt file                               | `pip freeze > requirements.txt`                  |
 | 13   | Run the Django development server                                            | `python3 manage.py runserver`                    |
 
-<br>
-
 #### JWT tokens, user registration, and cookies setup
 
 | Step | Description                                                                                                    | Command                                          |
