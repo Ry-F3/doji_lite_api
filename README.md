@@ -76,7 +76,7 @@ Please use this template: [Code Institute Gitpod Full Template](https://github.c
 
 ![config](/media/screenshots/config.jpg)
 
-Update config vars on Heroku with approriate details in conjunction with your project.
+* *Update config vars on Heroku with approriate details for your project.*
 
 | Step | Description                           | Command                                 |
 |------|---------------------------------------|-----------------------------------------|
