@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 class Trade(models.Model):
     LONG_SHORT_CHOICES = [
@@ -14,7 +15,7 @@ class Trade(models.Model):
     long_short = models.CharField(max_length=5, choices =LONG_SHORT_CHOICES, default='long')
     margin = models.DecimalField(max_digits=10, decimal_places=2)
     leverage = models.DecimalField(max_digits=5, decimal_places=3, default=1)
-    entry_price = models.CharField(max_digits=10, decimal_places=2)
+    entry_price = models.DecimalField(max_digits=10, decimal_places=2)
     current_price = models.DecimalField(max_digits=10, decimal_places=2)
     return_pnl = models.DecimalField(max_digits=10, decimal_places=2)
     is_trade_closed = models.BooleanField(default=False)

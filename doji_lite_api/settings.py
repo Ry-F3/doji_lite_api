@@ -89,6 +89,7 @@ INSTALLED_APPS = [
     'django_filters',
 
     'profiles',
+    'trades',
 ]
 
 SITE_ID = 1
