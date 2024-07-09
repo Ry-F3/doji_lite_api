@@ -80,7 +80,7 @@ Please use this template: [Code Institute Gitpod Full Template](https://github.c
 |------|---------------------------------------|-----------------------------------------|
 | 1    | Install Gunicorn for deployment       | `pip3 install gunicorn`                 |
 | 2    | Push and commit to repository         | `git add . && git commit -m "Deploy"`   |
-| 3    | Update config vars on Heroku          | Update config vars on Heroku with appropriate details for your project. |
+| 3    | Update config vars on Heroku          | Update config vars on Heroku with the appropriate details. |
 | 4    | Connect to GitHub repository          | Click on "Deployment Method" on Heroku  |
 | 5    | Deploy branch via Heroku              | `git push heroku main`                  |
 
