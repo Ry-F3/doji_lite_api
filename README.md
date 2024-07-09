@@ -74,8 +74,6 @@ Please use this template: [Code Institute Gitpod Full Template](https://github.c
 
 #### Deploy to Heroku
 
-![config](/media/screenshots/config.jpg)
-
 | Step | Description                           | Command                                 |
 |------|---------------------------------------|-----------------------------------------|
 | 1    | Install Gunicorn for deployment       | `pip3 install gunicorn`                 |
@@ -84,6 +82,9 @@ Please use this template: [Code Institute Gitpod Full Template](https://github.c
 | 4    | Connect to GitHub repository          | Click on "Deployment Method" on Heroku  |
 | 5    | Deploy branch via Heroku              | `git push heroku main`                  |
 
+<br>
+
+![config](/media/screenshots/config.jpg)
 
 <br>
 
