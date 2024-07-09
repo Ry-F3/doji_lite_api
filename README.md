@@ -1,4 +1,4 @@
-## Django rest framework setup
+## Django Rest Framework API Setup
 
 <br>
 
