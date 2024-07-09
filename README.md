@@ -64,6 +64,19 @@ Please use this template: [Code Institute Gitpod Full Template](https://github.c
 | 5        | Comment out `os.environ['DEV'] = '1'`                                | `ctr + /`                                               |
 | 6        | In `settings.py`, add a print statement to confirm database is connected | [click here](https://github.com/Ry-F3/doji_lite_api/blob/main/settings_tutorial/database_print_statement.py)                                         |
 
+#### Deploy to Heroku
+
+![config](/media/screenshots/config.jpg)
+
+Update config vars with approriate details in conjunction with your project.
+
+| Step | Description                           | Command                                 |
+|------|---------------------------------------|-----------------------------------------|
+| 1    | Install Gunicorn for deployment       | `pip3 install gunicorn`                 |
+| 2    | Push and commit to repository         | `git add . && git commit -m "Deploy"`   |
+| 3    | Connect to GitHub repository          | Click on "Deployment Method" on Heroku  |
+| 4    | Deploy branch via Heroku              | `Deploy branch`                  |
+
 #### Requesting user details 
 
 | Step | Description                                                                                                    | Command                                          |
