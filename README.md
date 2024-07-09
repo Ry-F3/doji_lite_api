@@ -24,6 +24,8 @@ Please use this template: [Code Institute Gitpod Full Template](https://github.c
 | 12   | Freeze requirements into requirements.txt file                               | `pip freeze > requirements.txt`                  |
 | 13   | Run the Django development server                                            | `python3 manage.py runserver`                    |
 
+<br>
+
 #### JWT tokens, user registration, and cookies setup
 
 | Step | Description                                                                                                    | Command                                          |
@@ -45,6 +47,8 @@ Please use this template: [Code Institute Gitpod Full Template](https://github.c
 | 15   | Specify the name of the refresh token cookie by setting `JWT_AUTH_REFRESH_COOKIE`                                | Set `JWT_AUTH_REFRESH_COOKIE = 'my-refresh-token'` in `settings.py`: [Click here](https://github.com/Ry-F3/doji_lite_api/blob/main/settings_tutorial/jwt_token.py) |
 | 16    | Freeze requirements into requirements.txt file                               | `pip freeze > requirements.txt`                  |
 
+<br>
+
 #### env.py file
 
 ![env.py](/media/screenshots/env.py.jpg)
@@ -52,6 +56,8 @@ Please use this template: [Code Institute Gitpod Full Template](https://github.c
 * Ensure to have the correct settings applied within settings.py file in order for the env.py to function correctly:
   * [os_getenv.py](https://github.com/Ry-F3/doji_lite_api/blob/main/settings_tutorial/os_getenv.py) *Use for reference*
   * [imports.py](https://github.com/Ry-F3/doji_lite_api/blob/main/settings_tutorial/imports.py) *Use for reference*
+
+<br>
 
 #### Connecting to a PostgreSQL Database
 
@@ -64,11 +70,13 @@ Please use this template: [Code Institute Gitpod Full Template](https://github.c
 | 5        | Comment out `os.environ['DEV'] = '1'`                                | `ctr + /`                                               |
 | 6        | In `settings.py`, add a print statement to confirm database is connected | [click here](https://github.com/Ry-F3/doji_lite_api/blob/main/settings_tutorial/database_print_statement.py)                                         |
 
+<br>
+
 #### Deploy to Heroku
 
 ![config](/media/screenshots/config.jpg)
 
-Update config vars with approriate details in conjunction with your project.
+Update config vars on Heroku with approriate details in conjunction with your project.
 
 | Step | Description                           | Command                                 |
 |------|---------------------------------------|-----------------------------------------|
@@ -76,6 +84,8 @@ Update config vars with approriate details in conjunction with your project.
 | 2    | Push and commit to repository         | `git add . && git commit -m "Deploy"`   |
 | 3    | Connect to GitHub repository          | Click on "Deployment Method" on Heroku  |
 | 4    | Deploy branch via Heroku              | `Deploy branch`                  |
+
+<br>
 
 #### Requesting user details 
 
@@ -87,6 +97,8 @@ Update config vars with approriate details in conjunction with your project.
 | 3    | Add the settings to `settings.py`.                                                                            | [Click here](https://github.com/Ry-F3/doji_lite_api/blob/main/settings_tutorial/rest_auth_serializers.py)                             |
 |      |                                                                                                                |                                                   |
 | 4    | Run the database migrations.                                                                                  | `python3 manage.py migrate`                      |
+
+<br>
 
 #### Setup <code>root_route</code>
 
