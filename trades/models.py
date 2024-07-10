@@ -14,7 +14,7 @@ class Trade(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     long_short = models.CharField(max_length=5, choices =LONG_SHORT_CHOICES, default='long')
     margin = models.DecimalField(max_digits=10, decimal_places=2)
-    leverage = models.DecimalField(max_digits=5, decimal_places=3, default=1)
+    leverage = models.DecimalField(max_digits=5, decimal_places=2)
     entry_price = models.DecimalField(max_digits=10, decimal_places=2)
     current_price = models.DecimalField(max_digits=10, decimal_places=2)
     return_pnl = models.DecimalField(max_digits=10, decimal_places=2)
