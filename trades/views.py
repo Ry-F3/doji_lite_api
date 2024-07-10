@@ -21,10 +21,47 @@ class TradesListView(generics.ListAPIView):
         return Response(serializer.data)
 
         
-class TradePost(generics.CreateAPIView):
+class TradePostView(generics.CreateAPIView):
     queryset = Trade.objects.all()
     serializer_class= TradesSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        entry_price = serializer.validated_data['entry_price']
+        current_price = serializer.validated_data['current_price']
+        margin = serializer.validated_data['margin']
+        leverage = serializer.validated_data['leverage']
+        
+        # Dummy calculations return_pnl
+        return_pnl = (current_price - entry_price) * margin * leverage
+
+        # Save the trade with the calculated return_pnl
+        serializer.save(user=self.request.user, return_pnl=return_pnl)
+
+class TradeDetailView(generics.RetrieveUpdateDestroyAPIView):
+    querset = Trade.objects.all()
+    serializer_class = TradesSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        trade_id = self.kwargs.get('pk')
+        return Trade.objects.filter(pk=trade_id)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+
+        # Perform dummy calculations for return_pnl
+        entry_price = serializer.validated_data['entry_price']
+        current_price = serializer.validated_data['current_price']
+        margin = serializer.validated_data['margin']
+        leverage = serializer.validated_data['leverage']
+        
+        return_pnl = (current_price - entry_price) * margin * leverage
+
+        # Update the trade with the calculated return_pnl
+        serializer.save(return_pnl=return_pnl)
+
+        return Response(serializer.data)
+

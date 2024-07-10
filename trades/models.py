@@ -21,7 +21,7 @@ class Trade(models.Model):
     is_trade_closed = models.BooleanField(default=False)
 
     class Meta:
-        unique_together = ('user', 'symbol', 'is_trade_closed')
+        unique_together = ('user', 'created_at')
 
     def __str__(self):
         return f'Trade({self.user.username}, {self.symbol}, {self.long_short})'
