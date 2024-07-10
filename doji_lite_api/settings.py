@@ -65,6 +65,8 @@ DEBUG = 'DEV' in os.environ
 ALLOWED_HOSTS = ['doji-lite-api-a2da6b12178c.herokuapp.com',
                  'localhost','8000-ryf3-dojiliteapi-24c5zqyja2a.ws.codeinstitute-ide.net']
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://8000-ryf3-dojiliteapi-24c5zqyja2a.ws.codeinstitute-ide.net']
 
 # Application definition
 

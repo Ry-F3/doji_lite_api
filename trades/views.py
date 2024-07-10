@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from rest_framework import generics, status, serializers
+from rest_framework import generics, permissions, status, serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from trades.models import Trade
@@ -21,3 +21,10 @@ class TradesListView(generics.ListAPIView):
         return Response(serializer.data)
 
         
+class TradePost(generics.CreateAPIView):
+    queryset = Trade.objects.all()
+    serializer_class= TradesSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
