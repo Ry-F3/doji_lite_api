@@ -8,6 +8,8 @@ class TradesSerializer(serializers.ModelSerializer):
     trader = ProfileSerializer(read_only=True)
     trade_id = serializers.SerializerMethodField()
     return_pnl = serializers.SerializerMethodField(read_only=True)
+    current_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+
 
 
     class Meta:
@@ -32,10 +34,10 @@ class TradesSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Entry price must be a number.")
         return value
 
-    def validate_current_price(self, value):
-        if not isinstance(value, (int, float, decimal.Decimal)):
-            raise serializers.ValidationError("Current price must be a number.")
-        return value
+    # def validate_current_price(self, value):
+    #     if not isinstance(value, (int, float, decimal.Decimal)):
+    #         raise serializers.ValidationError("Current price must be a number.")
+    #     return value
         
     # ---------------------------------------------------------------
 
