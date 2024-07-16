@@ -15,7 +15,7 @@ class TradesListView(generics.ListAPIView):
     serializer_class = TradesSerializer
 
     def update_current_prices(self):
-        trades = Trade.objects.all()
+        trades = Trade.objects.filter(is_trade_closed=False) # Filter out closed trades
         for trade in trades:
             symbol = trade.symbol
 
@@ -89,7 +89,6 @@ class TradePostView(generics.CreateAPIView):
 
         raise serializers.ValidationError("No data found for the given symbol in any API")
 
-
     def perform_create(self, serializer):
         symbol = serializer.validated_data['symbol']
         entry_price = serializer.validated_data['entry_price']
@@ -149,14 +148,16 @@ class TradeDetailView(generics.RetrieveUpdateDestroyAPIView):
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=True)
-        
-        # Debug prints to inspect request data
-        print(f"Request data: {request.data}")
+
+        # Check if trade is closed before updating
+        if instance.is_trade_closed:
+            raise serializers.ValidationError("Cannot update a closed trade.")
 
         serializer.is_valid(raise_exception=True)
 
-        # Ensure current_price is included in the request data
-        current_price = serializer.validated_data.get('current_price')
+        # Ensure current_price is included in the request data or fallback to instance value
+        current_price = serializer.validated_data.get('current_price', instance.current_price)
+
         if current_price is None:
             raise serializers.ValidationError("Current price is required.")
 
@@ -165,7 +166,7 @@ class TradeDetailView(generics.RetrieveUpdateDestroyAPIView):
 
         # Perform calculations for return_pnl
         entry_price = serializer.validated_data['entry_price']
-        current_price = serializer.validated_data['current_price']
+        # current_price = serializer.validated_data['current_price']
         margin = serializer.validated_data['margin']
         leverage = serializer.validated_data['leverage']
         long_short = serializer.validated_data['long_short']

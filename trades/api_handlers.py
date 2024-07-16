@@ -9,6 +9,10 @@ def fetch_quote(symbol):
         'apikey': settings.FMP_API_KEY,
     }
 
+    # Print the URL with parameters
+    print(f"Fetching data from URL: {api_url}")
+    print(f"Params: {params}")
+
     response = requests.get(api_url, params=params)
 
     if response.status_code == 200:
@@ -22,6 +26,10 @@ def fetch_profile(symbol):
     params = {
         'apikey': settings.FMP_API_KEY,
     }
+
+    # Print the URL with parameters
+    print(f"Fetching data from URL: {api_url}")
+    print(f"Params: {params}")
 
     response = requests.get(api_url, params=params)
 
