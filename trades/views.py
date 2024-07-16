@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from trades.models import Trade
 from django.conf import settings
+from .api_handlers import fetch_quote, fetch_profile
 from .calculations import calculate_percentage_change, calculate_return_pnl
 from .serializers import (TradesSerializer)
 
@@ -18,28 +19,20 @@ class TradesListView(generics.ListAPIView):
         for trade in trades:
             symbol = trade.symbol
 
-            # Fetch data from the external API
-            api_url = f'https://financialmodelingprep.com/api/v3/quote/{symbol}'
-            params = {
-                'apikey': settings.FMP_API_KEY,
-            }
+            apis = [
+                fetch_profile,  # Normal Assets
+                fetch_quote     # Cryptocurrency
+            ]
 
-            # Print the full URL with parameters to the terminal
-            full_url = f"{api_url}?apikey={params['apikey']}"
-            print(f"Fetching data from URL: {full_url}")
+            symbol_data = None
+            for api_function in apis:
+                symbol_data = api_function(symbol)
+                if symbol_data:
+                    break
 
-            # Make the API request
-            response = requests.get(api_url, params=params)
-
-            if response.status_code != 200:
+            if not symbol_data:
                 continue
 
-            data = response.json()
-            if not data:
-                continue
-
-            # Assuming the data contains necessary details, you can extract and use them
-            symbol_data = data[0]
             current_price = symbol_data.get('price')
 
             if current_price is None:
@@ -85,25 +78,14 @@ class TradePostView(generics.CreateAPIView):
     def fetch_data_from_api(self, symbol):
 
         apis = [
-            f'https://financialmodelingprep.com/api/v3/profile/{symbol}?', # Normal Assets
-            f'https://financialmodelingprep.com/api/v3/quote/{symbol}?' # Cryptocurrency
+            fetch_profile, # Normal Assets
+            fetch_quote    # Cryptocurrency
         ]
 
-        for api_url in apis:
-            params = {
-                'apikey': settings.FMP_API_KEY,
-            }
-
-                   # Print the full URL with parameters to the terminal
-            full_url = f"{api_url}apikey={params['apikey']}"
-            print(f"Fetching data from URL: {full_url}")
-
-            response = requests.get(api_url, params=params)
-            print(response.content)
-            if response.status_code == 200:
-                data = response.json()
-                if data:
-                    return data[0]
+        for api_function in apis:
+            symbol_data = api_function(symbol)
+            if symbol_data:
+                return symbol_data
 
         raise serializers.ValidationError("No data found for the given symbol in any API")
 
@@ -153,26 +135,16 @@ class TradeDetailView(generics.RetrieveUpdateDestroyAPIView):
         return generics.get_object_or_404(Trade, pk=trade_id)
 
     def fetch_current_price(self, symbol):
+        
         apis = [
-            f'https://financialmodelingprep.com/api/v3/profile/{symbol}?',  # Normal Assets
-            f'https://financialmodelingprep.com/api/v3/quote/{symbol}?'    # Cryptocurrency
+            fetch_profile, # Normal Assets
+            fetch_quote    # Cryptocurrency
         ]
 
-        for api_url in apis:
-            params = {
-                'apikey': settings.FMP_API_KEY,
-            }
-
-        response = requests.get(api_url, params=params)
-
-        if response.status_code != 200:
-            raise serializers.ValidationError(f"Failed to fetch current price for symbol {symbol}")
-
-        data = response.json()
-        if not data:
-            raise serializers.ValidationError(f"No data found for symbol {symbol}")
-
-        return Decimal(data[0]['price'])
+        for api_function in apis:
+            symbol_data = api_function(symbol)
+            if symbol_data:
+                return Decimal(symbol_data['price'])
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -191,7 +163,7 @@ class TradeDetailView(generics.RetrieveUpdateDestroyAPIView):
         # Convert current_price to decimal.Decimal
         current_price = Decimal(current_price)
 
-        # Perform dummy calculations for return_pnl
+        # Perform calculations for return_pnl
         entry_price = serializer.validated_data['entry_price']
         current_price = serializer.validated_data['current_price']
         margin = serializer.validated_data['margin']
