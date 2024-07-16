@@ -6,6 +6,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from trades.models import Trade
 from django.conf import settings
+from .calculations import calculate_percentage_change, calculate_return_pnl
 from .serializers import (TradesSerializer)
 
 class TradesListView(generics.ListAPIView):
@@ -50,8 +51,15 @@ class TradesListView(generics.ListAPIView):
             # Update the trade's current price
             trade.current_price = current_price
 
-            # Dummy calculations for return_pnl
-            trade.return_pnl = (current_price - trade.entry_price) * trade.margin * trade.leverage
+             # Calculate percentage change and return PnL
+            trade.percentage_change = calculate_percentage_change(
+                current_price, trade.entry_price, trade.leverage, trade.long_short
+            )
+
+            trade.return_pnl = calculate_return_pnl(trade.percentage_change, trade.margin)
+
+            trade.percentage = trade.percentage_change
+
             trade.save()
 
     def list(self, request, *args, **kwargs):
@@ -68,8 +76,7 @@ class TradesListView(generics.ListAPIView):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-
-        
+       
 class TradePostView(generics.CreateAPIView):
     queryset = Trade.objects.all()
     serializer_class= TradesSerializer
@@ -106,6 +113,7 @@ class TradePostView(generics.CreateAPIView):
         entry_price = serializer.validated_data['entry_price']
         margin = serializer.validated_data['margin']
         leverage = serializer.validated_data['leverage']
+        long_short = serializer.validated_data['long_short']
 
         # Fetch data from the external API
         symbol_data = self.fetch_data_from_api(symbol)
@@ -117,11 +125,16 @@ class TradePostView(generics.CreateAPIView):
         # Convert current_price to decimal.Decimal
         current_price = Decimal(current_price)
 
-        # Dummy calculations return_pnl
-        return_pnl = (current_price - entry_price) * margin * leverage
+        # Calculate percentage change and return PnL
+        percentage_change = calculate_percentage_change(
+            current_price, entry_price, leverage, long_short
+        )
+        return_pnl = calculate_return_pnl(percentage_change, margin)
+
+        percentage = percentage_change
 
         # Save the trade with the calculated return_pnl and current price
-        serializer.save(user=self.request.user, return_pnl=return_pnl, current_price=current_price)
+        serializer.save(user=self.request.user, return_pnl=return_pnl, current_price=current_price, percentage=percentage)
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -131,29 +144,70 @@ class TradePostView(generics.CreateAPIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 class TradeDetailView(generics.RetrieveUpdateDestroyAPIView):
-    querset = Trade.objects.all()
+    queryset = Trade.objects.all()
     serializer_class = TradesSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
+    def get_object(self):
         trade_id = self.kwargs.get('pk')
-        return Trade.objects.filter(pk=trade_id)
+        return generics.get_object_or_404(Trade, pk=trade_id)
+
+    def fetch_current_price(self, symbol):
+        apis = [
+            f'https://financialmodelingprep.com/api/v3/profile/{symbol}?',  # Normal Assets
+            f'https://financialmodelingprep.com/api/v3/quote/{symbol}?'    # Cryptocurrency
+        ]
+
+        for api_url in apis:
+            params = {
+                'apikey': settings.FMP_API_KEY,
+            }
+
+        response = requests.get(api_url, params=params)
+
+        if response.status_code != 200:
+            raise serializers.ValidationError(f"Failed to fetch current price for symbol {symbol}")
+
+        data = response.json()
+        if not data:
+            raise serializers.ValidationError(f"No data found for symbol {symbol}")
+
+        return Decimal(data[0]['price'])
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=True)
+        
+        # Debug prints to inspect request data
+        print(f"Request data: {request.data}")
+
         serializer.is_valid(raise_exception=True)
+
+        # Ensure current_price is included in the request data
+        current_price = serializer.validated_data.get('current_price')
+        if current_price is None:
+            raise serializers.ValidationError("Current price is required.")
+
+        # Convert current_price to decimal.Decimal
+        current_price = Decimal(current_price)
 
         # Perform dummy calculations for return_pnl
         entry_price = serializer.validated_data['entry_price']
         current_price = serializer.validated_data['current_price']
         margin = serializer.validated_data['margin']
         leverage = serializer.validated_data['leverage']
-        
-        return_pnl = (current_price - entry_price) * margin * leverage
+        long_short = serializer.validated_data['long_short']
 
-        # Update the trade with the calculated return_pnl
-        serializer.save(return_pnl=return_pnl)
+        # Calculate percentage change and return PnL
+        percentage_change = calculate_percentage_change(
+            current_price, entry_price, leverage, long_short
+        )
+        return_pnl = calculate_return_pnl(percentage_change, margin)
+
+        percentage = percentage_change
+
+        # Save the trade with the calculated return_pnl and current price
+        serializer.save(user=self.request.user, return_pnl=return_pnl, current_price=current_price, percentage=percentage)
 
         return Response(serializer.data)
 

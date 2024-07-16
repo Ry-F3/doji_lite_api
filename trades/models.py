@@ -19,6 +19,7 @@ class Trade(models.Model):
     current_price = models.DecimalField(max_digits=10, decimal_places=2)
     return_pnl = models.DecimalField(max_digits=10, decimal_places=2)
     is_trade_closed = models.BooleanField(default=False)
+    percentage = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
     class Meta:
         unique_together = ('user', 'created_at')
