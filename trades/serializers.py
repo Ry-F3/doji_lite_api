@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Trade
+from .models import Trade, HistoricalPnl, RealizedProfit
 from django.contrib.auth.models import User
 import decimal
 from profiles.serializers import (ProfileSerializer)
@@ -10,9 +10,6 @@ class TradesSerializer(serializers.ModelSerializer):
     return_pnl = serializers.SerializerMethodField(read_only=True)
     current_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True, required=False)
     formatted_percentage = serializers.SerializerMethodField(read_only=True)
-
-
-
 
     class Meta:
         model = Trade
@@ -54,3 +51,13 @@ class TradesSerializer(serializers.ModelSerializer):
     def get_formatted_percentage(self, obj):
         # Format the percentage with 2 decimal places and add a percentage sign
         return f"{obj.percentage:.2f}%"
+
+class HistoricalPnlSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HistoricalPnl
+        fields = ['id', 'user', 'date', 'symbol', 'pnl']
+
+class RealizedProfitSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RealizedProfit
+        fields = ['total_pnl', 'today_pnl', 'yesterday_total_pnl', 'yesterday_pnl', 'daily_percentage_change', 'last_30_day_profit', 'last_90_day_profit', 'last_180_day_profit', 'yearly_profit']

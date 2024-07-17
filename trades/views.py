@@ -4,11 +4,12 @@ from django.shortcuts import render
 from rest_framework import generics, permissions, status, serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from trades.models import Trade
+from trades.models import Trade, HistoricalPnl, RealizedProfit
 from django.conf import settings
 from .api_handlers import fetch_quote, fetch_profile
 from .calculations import calculate_percentage_change, calculate_return_pnl
-from .serializers import (TradesSerializer)
+from rest_framework.permissions import IsAuthenticated
+from .serializers import (TradesSerializer, HistoricalPnlSerializer, RealizedProfitSerializer)
 
 class TradesListView(generics.ListAPIView):
     queryset = Trade.objects.all()
@@ -184,3 +185,18 @@ class TradeDetailView(generics.RetrieveUpdateDestroyAPIView):
 
         return Response(serializer.data)
 
+class HistoricalPnlListView(generics.ListAPIView):
+    queryset = HistoricalPnl.objects.all()
+    serializer_class = HistoricalPnlSerializer
+    permission_classes = [IsAuthenticated]
+
+
+class RealizedProfitAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+        user = self.request.user
+        try:
+            realized_profit = RealizedProfit.objects.get(user=user)
+            serializer = RealizedProfitSerializer(realized_profit)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except RealizedProfit.DoesNotExist:
+            return Response({'detail': 'RealizedProfit data not found.'}, status=status.HTTP_404_NOT_FOUND)
