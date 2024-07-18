@@ -89,6 +89,10 @@ class RealizedProfit(models.Model):
         yesterday_pnl = HistoricalPnl.objects.filter(user=self.user, date__date=yesterday).aggregate(models.Sum('pnl'))['pnl__sum']
         self.yesterday_total_pnl = yesterday_pnl if yesterday_pnl is not None else Decimal('0.00')
 
+        # Calculate yesterday's PnL
+        yesterday_pnl = HistoricalPnl.objects.filter(user=self.user, date__date=yesterday).aggregate(models.Sum('pnl'))['pnl__sum']
+        self.yesterday_pnl = yesterday_pnl if yesterday_pnl is not None else Decimal('0.00')
+
         # Calculate daily percentage change
         if self.yesterday_total_pnl > 0:
             self.daily_percentage_change = ((self.total_pnl - self.yesterday_total_pnl) / self.yesterday_total_pnl) * 100
