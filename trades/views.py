@@ -195,7 +195,14 @@ class RealizedProfitAPIView(APIView):
     def get(self, request, *args, **kwargs):
         user = self.request.user
         try:
-            realized_profit = RealizedProfit.objects.get(user=user)
+            # Get or create the RealizedProfit instance for the current user
+            realized_profit, created = RealizedProfit.objects.get_or_create(user=user)
+            
+            # Update the instance with the latest values and timestamp
+            realized_profit.update_realized_profit()
+            realized_profit.save()
+
+            # Serialize the updated instance
             serializer = RealizedProfitSerializer(realized_profit)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except RealizedProfit.DoesNotExist:

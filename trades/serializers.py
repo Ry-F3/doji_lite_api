@@ -60,4 +60,4 @@ class HistoricalPnlSerializer(serializers.ModelSerializer):
 class RealizedProfitSerializer(serializers.ModelSerializer):
     class Meta:
         model = RealizedProfit
-        fields = ['total_pnl', 'today_pnl', 'yesterday_total_pnl', 'yesterday_pnl', 'daily_percentage_change', 'last_30_day_profit', 'last_90_day_profit', 'last_180_day_profit', 'yearly_profit']
+        fields = ['total_pnl', 'today_pnl', 'yesterday_total_pnl', 'yesterday_pnl', 'daily_percentage_change', 'last_30_day_profit', 'last_90_day_profit', 'last_180_day_profit', 'yearly_profit', 'updated_at']
