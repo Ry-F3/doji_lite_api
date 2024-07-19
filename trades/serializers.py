@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import Trade
 from django.contrib.auth.models import User
 import decimal
-from profiles.serializers import (ProfileSerializer)
+from profiles.serializers import ProfileSerializer
 
 class TradesSerializer(serializers.ModelSerializer):
     trader = ProfileSerializer(read_only=True)

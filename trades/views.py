@@ -5,6 +5,7 @@ from rest_framework import generics, permissions, status, serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from trades.models import Trade
+from historical_datasets.models import HistoricalPnl
 from django.conf import settings
 from .api_handlers import fetch_quote, fetch_profile
 from .calculations import calculate_percentage_change, calculate_return_pnl
@@ -96,6 +97,7 @@ class TradePostView(generics.CreateAPIView):
         margin = serializer.validated_data['margin']
         leverage = serializer.validated_data['leverage']
         long_short = serializer.validated_data['long_short']
+        is_trade_closed = serializer.validated_data.get('is_trade_closed', False)
 
         # Fetch data from the external API
         symbol_data = self.fetch_data_from_api(symbol)
@@ -116,7 +118,15 @@ class TradePostView(generics.CreateAPIView):
         percentage = percentage_change
 
         # Save the trade with the calculated return_pnl and current price
-        serializer.save(user=self.request.user, return_pnl=return_pnl, current_price=current_price, percentage=percentage)
+        trade = serializer.save(user=self.request.user, return_pnl=return_pnl, current_price=current_price, percentage=percentage)
+
+        if is_trade_closed:
+            HistoricalPnl.objects.create(
+                user=self.request.user,
+                date=trade.created_at,
+                symbol=symbol,
+                pnl=return_pnl
+            )
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
