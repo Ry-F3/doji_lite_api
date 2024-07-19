@@ -27,4 +27,6 @@ urlpatterns = [
     ),
     path('', include('profiles.urls')),
     path('', include('trades.urls')),
+    path('', include('historical_datasets.urls')),
+    path('', include('pnls.urls')),
 ]

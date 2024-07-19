@@ -95,6 +95,8 @@ INSTALLED_APPS = [
 
     'profiles',
     'trades',
+    'historical_datasets',
+    'pnls',
 ]
 
 SITE_ID = 1
