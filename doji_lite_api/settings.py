@@ -64,7 +64,7 @@ FMP_API_KEY = os.getenv('FMP_API_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = 'DEV' in os.environ
 
-ALLOWED_HOSTS = ['doji-lite-api-a2da6b12178c.herokuapp.com',
+ALLOWED_HOSTS = [os.environ.get('ALLOWED_HOST'), 'doji-lite-api-a2da6b12178c.herokuapp.com',
                  'localhost','8000-ryf3-dojiliteapi-24c5zqyja2a.ws.codeinstitute-ide.net']
 
 # Add to the readme
