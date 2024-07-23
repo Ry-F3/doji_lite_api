@@ -69,7 +69,9 @@ ALLOWED_HOSTS = [os.environ.get('ALLOWED_HOST'),
 
 # Add to the readme
 CSRF_TRUSTED_ORIGINS = [
-    'https://8000-ryf3-dojiliteapi-24c5zqyja2a.ws.codeinstitute-ide.net']
+    'https://8000-ryf3-dojiliteapi-24c5zqyja2a.ws.codeinstitute-ide.net',
+    'https://doji-lite-api-a2da6b12178c.herokuapp.com',
+    'https://doji-lite-4b727b4dd529.herokuapp.com']
 
 # Application definition
 
