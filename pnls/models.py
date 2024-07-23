@@ -75,9 +75,16 @@ class RealizedProfit(models.Model):
     def calculate_daily_percentage_change(self):
         
         """Calculate the percentage change in profit and loss (PnL) from yesterday to today."""
+        # Calculate yesterday's total PnL
+        calculated_yesterday_total_pnl = self.calculate_yesterday_total_pnl()
+
         # Calculate yesterday's total PnL if it's zero
         if self.yesterday_total_pnl == Decimal('0.00'):
             self.yesterday_total_pnl = self.calculate_total_pnl() - self.today_pnl
+
+        # Check if it's the first entry or if both total_pnl and yesterday_total_pnl are zero
+        if self.total_pnl == Decimal('0.00') and self.yesterday_total_pnl == Decimal('0.00'):
+            return Decimal('0.00')  # No change if there's no previous data
         
         # Calculate the daily percentage change
         if self.yesterday_total_pnl > Decimal('0.00'):
