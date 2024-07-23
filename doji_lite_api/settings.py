@@ -127,6 +127,12 @@ if 'CLIENT_ORIGIN' in os.environ:
 
 CORS_ALLOWED_ORIGIN_REGEXES = [r"^https://.*\.codeinstitute-ide\.net$",]
 
+CORS_ALLOWED_ORIGINS = [
+    'https://8080-ryf3-dojilite-q8wq924u6bu.ws.codeinstitute-ide.net',
+    'https://doji-lite-api-a2da6b12178c.herokuapp.com',
+    'https://doji-lite-4b727b4dd529.herokuapp.com'
+]
+
 
 CORS_ALLOW_CREDENTIALS = True
 
