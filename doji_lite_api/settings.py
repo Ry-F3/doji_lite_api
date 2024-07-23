@@ -65,7 +65,8 @@ FMP_API_KEY = os.getenv('FMP_API_KEY')
 DEBUG = 'DEV' in os.environ
 
 ALLOWED_HOSTS = [os.environ.get('ALLOWED_HOST'), 
-                 'localhost','8000-ryf3-dojiliteapi-24c5zqyja2a.ws.codeinstitute-ide.net']
+                 'localhost']
+# ,'8000-ryf3-dojiliteapi-24c5zqyja2a.ws.codeinstitute-ide.net'
 
 # Add to the readme
 CSRF_TRUSTED_ORIGINS = [
@@ -86,6 +87,7 @@ INSTALLED_APPS = [
     'cloudinary',
     'rest_framework',
     'rest_framework.authtoken',
+    'django_filters',
     'dj_rest_auth',
     'django.contrib.sites',
     'allauth',
@@ -93,12 +95,10 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'dj_rest_auth.registration',
     'corsheaders',
-    'django_filters',
-
+    
     'profiles',
     'trades',
     'historical_datasets',
-
     'pnls',
 ]
 
@@ -122,10 +122,7 @@ if 'CLIENT_ORIGIN' in os.environ:
     CORS_ALLOWED_ORIGINS = [
         os.environ.get('CLIENT_ORIGIN')
     ]
-else:
-    CORS_ALLOWED_ORIGIN_REGEXES = [
-        r"^https://.*\.codeinstitute-ide\.net$",
-    ]
+
 
 CORS_ALLOW_CREDENTIALS = True
 
