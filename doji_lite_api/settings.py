@@ -66,7 +66,7 @@ FMP_API_KEY = os.getenv('FMP_API_KEY')
 DEBUG = 'DEV' in os.environ
 
 ALLOWED_HOSTS = [os.environ.get('ALLOWED_HOST'), 
-                 'localhost']
+                 'localhost' ,'8000-ryf3-dojiliteapi-24c5zqyja2a.ws.codeinstitute-ide.net']
 # ,'8000-ryf3-dojiliteapi-24c5zqyja2a.ws.codeinstitute-ide.net'
 
 # Add to the readme
