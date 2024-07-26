@@ -88,16 +88,16 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'cloudinary',
     'rest_framework',
-    'rest_framework.authtoken',
     'django_filters',
-    'dj_rest_auth',
+    'rest_framework.authtoken',
     'django.contrib.sites',
+    'dj_rest_auth',
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
     'dj_rest_auth.registration',
     'corsheaders',
-
+    # Your apps
     'profiles',
     'trades',
     'historical_datasets',
@@ -114,8 +114,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'allauth.account.middleware.AccountMiddleware',
+    # 'allauth.account.middleware.AccountMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+
 ]
 
 ROOT_URLCONF = 'doji_lite_api.urls'
