@@ -65,8 +65,8 @@ FMP_API_KEY = os.getenv('FMP_API_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = 'DEV' in os.environ
 
-ALLOWED_HOSTS = [os.environ.get('ALLOWED_HOST'), 
-                 'localhost' ,'8000-ryf3-dojiliteapi-24c5zqyja2a.ws.codeinstitute-ide.net']
+ALLOWED_HOSTS = [os.environ.get('ALLOWED_HOST'),
+                 'localhost', '8000-ryf3-dojiliteapi-swnyjyt30un.ws-eu115.gitpod.io']
 # ,'8000-ryf3-dojiliteapi-24c5zqyja2a.ws.codeinstitute-ide.net'
 
 # Add to the readme
@@ -97,7 +97,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'dj_rest_auth.registration',
     'corsheaders',
-    
+
     'profiles',
     'trades',
     'historical_datasets',
@@ -125,7 +125,7 @@ if 'CLIENT_ORIGIN' in os.environ:
         os.environ.get('CLIENT_ORIGIN')
     ]
 
-CORS_ALLOWED_ORIGIN_REGEXES = [r"^https://.*\.codeinstitute-ide\.net$",]
+CORS_ALLOWED_ORIGIN_REGEXES = [r"^https://.*\.gitpod\.io$",]
 
 CORS_ALLOWED_ORIGINS = [
     'https://8080-ryf3-dojilite-q8wq924u6bu.ws.codeinstitute-ide.net',
