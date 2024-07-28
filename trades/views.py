@@ -1,6 +1,8 @@
 import requests
 from decimal import Decimal
+from django.http import JsonResponse
 from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework import generics, permissions, status, serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -12,12 +14,32 @@ from .calculations import calculate_percentage_change, calculate_return_pnl
 from rest_framework.permissions import IsAuthenticated
 from .serializers import (TradesSerializer)
 
+
+@csrf_exempt
+def search_asset(request):
+    if request.method == "GET":
+        symbol = request.GET.get('symbol')
+        if not symbol:
+            return JsonResponse({'error': 'Symbol is required'}, status=400)
+        # Try fetching data from the APIs
+        symbol_data = fetch_quote(symbol)
+        if not symbol_data:
+            symbol_data = fetch_profile(symbol)
+
+        if symbol_data:
+            return JsonResponse(symbol_data)
+        else:
+            return JsonResponse({'error': 'No data found for the given symbol'}, status=404)
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
 class TradesListView(generics.ListAPIView):
     queryset = Trade.objects.all()
     serializer_class = TradesSerializer
 
     def update_current_prices(self):
-        trades = Trade.objects.filter(is_trade_closed=False) # Filter out closed trades
+        trades = Trade.objects.filter(
+            is_trade_closed=False)  # Filter out closed trades
         for trade in trades:
             symbol = trade.symbol
 
@@ -46,12 +68,13 @@ class TradesListView(generics.ListAPIView):
             # Update the trade's current price
             trade.current_price = current_price
 
-             # Calculate percentage change and return PnL
+            # Calculate percentage change and return PnL
             trade.percentage_change = calculate_percentage_change(
                 current_price, trade.entry_price, trade.leverage, trade.long_short
             )
 
-            trade.return_pnl = calculate_return_pnl(trade.percentage_change, trade.margin)
+            trade.return_pnl = calculate_return_pnl(
+                trade.percentage_change, trade.margin)
 
             trade.percentage = trade.percentage_change
 
@@ -67,20 +90,20 @@ class TradesListView(generics.ListAPIView):
                 {"error": "No Trades Exist"},
                 status=status.HTTP_404_NOT_FOUND
             )
-        
+
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-       
+
 class TradePostView(generics.CreateAPIView):
     queryset = Trade.objects.all()
-    serializer_class= TradesSerializer
+    serializer_class = TradesSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def fetch_data_from_api(self, symbol):
 
         apis = [
-            fetch_profile, # Normal Assets
+            fetch_profile,  # Normal Assets
             fetch_quote    # Cryptocurrency
         ]
 
@@ -89,7 +112,8 @@ class TradePostView(generics.CreateAPIView):
             if symbol_data:
                 return symbol_data
 
-        raise serializers.ValidationError("No data found for the given symbol in any API")
+        raise serializers.ValidationError(
+            "No data found for the given symbol in any API")
 
     def perform_create(self, serializer):
         symbol = serializer.validated_data['symbol']
@@ -97,14 +121,16 @@ class TradePostView(generics.CreateAPIView):
         margin = serializer.validated_data['margin']
         leverage = serializer.validated_data['leverage']
         long_short = serializer.validated_data['long_short']
-        is_trade_closed = serializer.validated_data.get('is_trade_closed', False)
+        is_trade_closed = serializer.validated_data.get(
+            'is_trade_closed', False)
 
         # Fetch data from the external API
         symbol_data = self.fetch_data_from_api(symbol)
         current_price = symbol_data.get('price')
 
         if current_price is None:
-            raise serializers.ValidationError("Current price not available for the given symbol")
+            raise serializers.ValidationError(
+                "Current price not available for the given symbol")
 
         # Convert current_price to decimal.Decimal
         current_price = Decimal(current_price)
@@ -118,7 +144,8 @@ class TradePostView(generics.CreateAPIView):
         percentage = percentage_change
 
         # Save the trade with the calculated return_pnl and current price
-        trade = serializer.save(user=self.request.user, return_pnl=return_pnl, current_price=current_price, percentage=percentage)
+        trade = serializer.save(user=self.request.user, return_pnl=return_pnl,
+                                current_price=current_price, percentage=percentage)
 
         if is_trade_closed:
             HistoricalPnl.objects.create(
@@ -135,6 +162,7 @@ class TradePostView(generics.CreateAPIView):
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
+
 class TradeDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Trade.objects.all()
     serializer_class = TradesSerializer
@@ -145,9 +173,9 @@ class TradeDetailView(generics.RetrieveUpdateDestroyAPIView):
         return generics.get_object_or_404(Trade, pk=trade_id)
 
     def fetch_current_price(self, symbol):
-        
+
         apis = [
-            fetch_profile, # Normal Assets
+            fetch_profile,  # Normal Assets
             fetch_quote    # Cryptocurrency
         ]
 
@@ -158,7 +186,8 @@ class TradeDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer = self.get_serializer(
+            instance, data=request.data, partial=True)
 
         # Check if trade is closed before updating
         if instance.is_trade_closed:
@@ -167,7 +196,8 @@ class TradeDetailView(generics.RetrieveUpdateDestroyAPIView):
         serializer.is_valid(raise_exception=True)
 
         # Ensure current_price is included in the request data or fallback to instance value
-        current_price = serializer.validated_data.get('current_price', instance.current_price)
+        current_price = serializer.validated_data.get(
+            'current_price', instance.current_price)
 
         if current_price is None:
             raise serializers.ValidationError("Current price is required.")
@@ -191,6 +221,7 @@ class TradeDetailView(generics.RetrieveUpdateDestroyAPIView):
         percentage = percentage_change
 
         # Save the trade with the calculated return_pnl and current price
-        serializer.save(user=self.request.user, return_pnl=return_pnl, current_price=current_price, percentage=percentage)
+        serializer.save(user=self.request.user, return_pnl=return_pnl,
+                        current_price=current_price, percentage=percentage)
 
         return Response(serializer.data)
