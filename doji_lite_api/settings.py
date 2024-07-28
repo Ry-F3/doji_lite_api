@@ -48,7 +48,7 @@ REST_AUTH_SERIALIZERS = {
 }
 
 REST_USE_JWT = True  # enable token auth
-JWT_AUTH_SECURE = False  # sent over https only
+JWT_AUTH_SECURE = True  # sent over https only
 JWT_AUTH_COOKIE = 'my-app-auth'  # declare cookie name access
 JWT_AUTH_REFRESH_COOKIE = 'my-refresh-token'  # declare cookie name refresh
 JWT_AUTH_SAMESITE = 'None'
@@ -66,12 +66,12 @@ FMP_API_KEY = os.getenv('FMP_API_KEY')
 DEBUG = 'DEV' in os.environ
 
 ALLOWED_HOSTS = [os.environ.get('ALLOWED_HOST'),
-                 'localhost', '8000-ryf3-dojiliteapi-swnyjyt30un.ws-eu115.gitpod.io']
+                 'localhost', '8000-ryf3-dojiliteapi-swnyjyt30un.ws-us115.gitpod.io']
 # ,'8000-ryf3-dojiliteapi-24c5zqyja2a.ws.codeinstitute-ide.net'
 
 # Add to the readme
 CSRF_TRUSTED_ORIGINS = [
-    'https://8000-ryf3-dojiliteapi-swnyjyt30un.ws-eu115.gitpod.io',
+    'https://8000-ryf3-dojiliteapi-swnyjyt30un.ws-us115.gitpod.io',
     'https://8080-ryf3-dojilite-kvemra798u0.ws-eu115.gitpod.io',
     'https://doji-lite-api-a2da6b12178c.herokuapp.com',
     'https://doji-lite-4b727b4dd529.herokuapp.com']
