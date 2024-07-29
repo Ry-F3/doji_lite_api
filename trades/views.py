@@ -17,19 +17,45 @@ from .serializers import (TradesSerializer)
 
 @csrf_exempt
 def search_asset(request):
-    if request.method == "GET":
+    if request.method == 'GET':
         symbol = request.GET.get('symbol')
         if not symbol:
             return JsonResponse({'error': 'Symbol is required'}, status=400)
-        # Try fetching data from the APIs
-        symbol_data = fetch_quote(symbol)
-        if not symbol_data:
-            symbol_data = fetch_profile(symbol)
 
-        if symbol_data:
-            return JsonResponse(symbol_data)
+        # Fetch data from both APIs
+        quote_data = fetch_quote(symbol)
+        profile_data = fetch_profile(symbol)
+
+        # Combine data
+        if quote_data and profile_data:
+            combined_data = {
+                'symbol': quote_data.get('symbol'),
+                'name': profile_data.get('name'),
+                'price': quote_data.get('price'),
+                'changesPercentage': quote_data.get('changesPercentage'),
+                'change': quote_data.get('change'),
+                'dayLow': quote_data.get('dayLow'),
+                'dayHigh': quote_data.get('dayHigh'),
+                'yearHigh': quote_data.get('yearHigh'),
+                'yearLow': quote_data.get('yearLow'),
+                'marketCap': quote_data.get('marketCap'),
+                'priceAvg50': quote_data.get('priceAvg50'),
+                'priceAvg200': quote_data.get('priceAvg200'),
+                'exchange': quote_data.get('exchange'),
+                'volume': quote_data.get('volume'),
+                'avgVolume': quote_data.get('avgVolume'),
+                'open': quote_data.get('open'),
+                'previousClose': quote_data.get('previousClose'),
+                'eps': quote_data.get('eps'),
+                'pe': quote_data.get('pe'),
+                'earningsAnnouncement': quote_data.get('earningsAnnouncement'),
+                'sharesOutstanding': quote_data.get('sharesOutstanding'),
+                'timestamp': quote_data.get('timestamp'),
+            }
+            return JsonResponse(combined_data)
         else:
             return JsonResponse({'error': 'No data found for the given symbol'}, status=404)
+
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 

@@ -22,7 +22,13 @@ CLOUDINARY_STORAGE = {
     'CLOUDINARY_URL': os.environ.get('CLOUDINARY_URL')
 }
 MEDIA_URL = '/media/'
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+# DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+
+# Set MEDIA_ROOT to an absolute path
+MEDIA_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'media')
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -63,7 +69,8 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 FMP_API_KEY = os.getenv('FMP_API_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = 'DEV' in os.environ
+# DEBUG = 'DEV' in os.environ
+DEBUG = True
 
 ALLOWED_HOSTS = [os.environ.get('ALLOWED_HOST'),
                  'localhost', '8000-ryf3-dojiliteapi-swnyjyt30un.ws-us115.gitpod.io']
@@ -102,6 +109,7 @@ INSTALLED_APPS = [
     'trades',
     'historical_datasets',
     'pnls',
+    'trade_csv'
 ]
 
 SITE_ID = 1
