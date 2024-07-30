@@ -1,7 +1,7 @@
 from django.urls import path
-from .views import upload_csv, get_trades
+from .views import UploadFileView, CsvTradeView
 
 urlpatterns = [
-    path('upload_csv/', upload_csv, name='upload_csv'),
-    path('get_trades/', get_trades, name='get_trades'),
+    path('upload/', UploadFileView.as_view(), name='upload-file'),
+    path('trades-csv/', CsvTradeView.as_view(), name='csv-trade'),
 ]

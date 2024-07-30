@@ -1,37 +1,63 @@
 from django.contrib import admin
-from django.http import HttpResponseRedirect
-from django.urls import path
-from django.utils.html import format_html
-from django.shortcuts import render
-from .models import Trade
-from .utils import import_trades_from_csv
+from .models import TradeUploadCsv
 
 
-@admin.register(Trade)
-class TradeAdmin(admin.ModelAdmin):
-    list_display = ('underlying_asset', 'side',
-                    'order_time', 'price', 'status')
+class TradeUploadCsvAdmin(admin.ModelAdmin):
+    list_display = (
+        'user',
+        'underlying_asset',
+        'margin_type',
+        'leverage',
+        'order_time',
+        'side',
+        'formatted_avg_fill',  # Use the custom method for avg_fill
+        # 'price',
+        'formatted_filled',
+        # 'total',
+        'pnl',
+        'pnl_percentage',
+        'fee',
+        'order_options',
+        'reduce_only',
+        'status',
+    )
+    list_filter = (
+        'user',
+        'underlying_asset',
+        'margin_type',
+        'side',
+        'status',
+        'order_time',
+    )
+    search_fields = (
+        'underlying_asset',
+        'order_time',
+        'side',
+        'status',
+    )
+    ordering = ('-order_time',)  # Order by order_time descending by default
 
-    def get_urls(self):
-        urls = super().get_urls()
-        custom_urls = [
-            path('upload-csv/', self.admin_site.admin_view(self.upload_csv),
-                 name='upload-csv'),
-        ]
-        return custom_urls + urls
+    def formatted_avg_fill(self, obj):
+        """Format avg_fill with conditional decimal places."""
+        if obj.avg_fill is not None:
+            # Format with 2 decimals if avg_fill >= 1, otherwise with 6 decimals
+            if obj.avg_fill >= 1:
+                return f"{obj.avg_fill:.2f}"
+            else:
+                return f"{obj.avg_fill:.8f}"
+        return 'N/A'
 
-    def upload_csv(self, request):
-        if request.method == 'POST':
-            csv_file = request.FILES['file']
-            import_trades_from_csv(csv_file)  # Call your CSV import function
-            self.message_user(
-                request, "CSV uploaded and processed successfully.")
-            return HttpResponseRedirect("../")
+    def formatted_filled(self, obj):
+        """Format quantity with conditional decimal places."""
+        if obj.filled is not None:
+            if obj.filled >= 1:
+                return f"{obj.filled:.2f}"
+            else:
+                return f"{obj.filled:.8f}"
+        return 'N/A'
 
-        form_html = """
-            <form method="post" enctype="multipart/form-data">
-                <input type="file" name="file" accept=".csv" required>
-                <button type="submit">Upload CSV</button>
-            </form>
-        """
-        return render(request, 'admin/upload_csv.html', {'form_html': format_html(form_html)})
+    formatted_avg_fill.short_description = 'Avg Fill'  # Label for the column
+    formatted_filled.short_description = 'Filled'
+
+
+admin.site.register(TradeUploadCsv, TradeUploadCsvAdmin)
