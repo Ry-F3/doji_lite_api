@@ -11,4 +11,5 @@ class APICounter:
 
 
 # Singleton instance
+
 api_counter = APICounter()
