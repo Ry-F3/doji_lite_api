@@ -8,7 +8,8 @@ class TradeUploadCsv(models.Model):
         ('OtherExchange', 'Other Exchange'),
         # Add other exchanges as needed
     ]
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='csv_trades')
     # Corresponds to "Underlying Asset"
     underlying_asset = models.CharField(max_length=10)
     # Corresponds to "Margin Mode"
@@ -34,7 +35,7 @@ class TradeUploadCsv(models.Model):
     # Corresponds to "Order Options"
     order_options = models.CharField(max_length=10)
     reduce_only = models.BooleanField()  # Corresponds to "Reduce-only"
-    status = models.CharField(max_length=10)  # Corresponds to "Status"
+    trade_status = models.CharField(max_length=10)  # Corresponds to "Status"
     exchange = models.CharField(
         max_length=100, choices=EXCHANGE_CHOICES, default='')
     is_open = models.BooleanField(default=True)

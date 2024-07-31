@@ -4,7 +4,8 @@ from django.contrib.auth.models import User
 
 
 class Profile(models.Model):
-    owner = models.OneToOneField(User, on_delete=models.CASCADE)
+    owner = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name='profile')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     first_name = models.CharField(max_length=200, blank=True)

@@ -19,21 +19,21 @@ class TradeUploadCsvAdmin(admin.ModelAdmin):
         'fee',
         'order_options',
         'reduce_only',
-        'status',
+        'trade_status',
     )
     list_filter = (
         'user',
         'underlying_asset',
         'margin_type',
         'side',
-        'status',
+        'trade_status',
         'order_time',
     )
     search_fields = (
         'underlying_asset',
         'order_time',
         'side',
-        'status',
+        'trade_status',
     )
     ordering = ('-order_time',)  # Order by order_time descending by default
 

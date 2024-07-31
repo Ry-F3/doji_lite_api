@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import TradeUploadCsv
 from decimal import Decimal
+from django.contrib.auth.models import User
 
 
 class FileUploadSerializer(serializers.Serializer):
@@ -13,12 +14,13 @@ class SaveTradeSerializer(serializers.ModelSerializer):
     formatted_avg_fill = serializers.SerializerMethodField()
     formatted_filled = serializers.SerializerMethodField()
     last_price = serializers.SerializerMethodField()
+    formatted_pnl_percentage = serializers.SerializerMethodField()
 
     class Meta:
         model = TradeUploadCsv
         fields = ['id', 'user', 'underlying_asset', 'margin_type',
                   'leverage', 'order_time', 'side', 'formatted_avg_fill', 'last_price',
-                  'formatted_filled', 'pnl', 'pnl_percentage', 'fee', 'exchange', 'is_open']
+                  'formatted_filled', 'pnl', 'formatted_pnl_percentage', 'fee', 'exchange', 'trade_status', 'is_open']
 
     def get_formatted_avg_fill(self, obj):
         """Format avg_fill with conditional decimal places."""
@@ -44,6 +46,16 @@ class SaveTradeSerializer(serializers.ModelSerializer):
                 return f"{filled_value:.8f}"
         return 'N/A'
 
+    def get_formatted_pnl_percentage(self, obj):
+        # Format the percentage with 2 decimal places and add a percentage sign
+        return f"{obj.pnl_percentage:.2f}%"
+
     def get_last_price(self, obj):
-        # This method will be used to return the value for 'last_price'
-        return obj.price
+        """Format the price with conditional decimal places."""
+        if obj.price is not None:
+            price_value = Decimal(obj.price)
+            if price_value >= 1:
+                return f"{price_value:.2f}"
+            else:
+                return f"{price_value:.6f}"  # Adjusted to 6 decimal places
+        return 'N/A'
