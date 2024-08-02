@@ -31,4 +31,5 @@ urlpatterns = [
     path('', include('historical_datasets.urls')),
     path('', include('pnls.urls')),
     path('', include('trade_csv.urls')),
+    path('', include('trades_upload_csv.urls')),
 ]

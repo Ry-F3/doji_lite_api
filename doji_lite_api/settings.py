@@ -103,7 +103,8 @@ INSTALLED_APPS = [
     'trades',
     'historical_datasets',
     'pnls',
-    'trade_csv'
+    'trade_csv',
+    'trades_upload_csv'
 ]
 
 SITE_ID = 1
