@@ -1,21 +1,21 @@
 trades = [
-    {"id": 1, "side": "Buy", "formatted_filled": 0.00600000},
-    {"id": 2, "side": "Sell", "formatted_filled": 0.00200000},
-    {"id": 3, "side": "Sell", "formatted_filled": 0.00200000},
-    {"id": 4, "side": "Sell", "formatted_filled": 0.00400000},
-    {"id": 5, "side": "Buy", "formatted_filled": 0.00800000},
-    {"id": 6, "side": "Sell", "formatted_filled": 0.00300000},
-    {"id": 7, "side": "Sell", "formatted_filled": 0.00200000},
-    {"id": 8, "side": "Sell", "formatted_filled": 0.00400000},
-    {"id": 9, "side": "Sell", "formatted_filled": 0.00800000},
-    {"id": 10, "side": "Buy", "formatted_filled": 0.00300000},
-    {"id": 11, "side": "Buy", "formatted_filled": 0.00400000},
-    {"id": 12, "side": "Sell", "formatted_filled": 0.00900000},
-    {"id": 13, "side": "Buy", "formatted_filled": 0.00400000},
-    {"id": 14, "side": "Buy", "formatted_filled": 0.00400000},
-    {"id": 15, "side": "Buy", "formatted_filled": 0.00300000},
-    {"id": 16, "side": "Buy", "formatted_filled": 0.00400000},
-    {"id": 17, "side": "Buy", "formatted_filled": 0.00400000}
+    {"id": 1, "side": "Buy", "avg_fill": 65888.70, "formatted_filled": 0.00600000},
+    {"id": 2, "side": "Sell", "avg_fill": 	64309.50, "formatted_filled": 0.00200000},
+    {"id": 3, "side": "Sell", "avg_fill": 63367.40, "formatted_filled": 0.00200000},
+    {"id": 4, "side": "Sell", "avg_fill": 62831.10, "formatted_filled": 0.00400000},
+    {"id": 5, "side": "Buy", "avg_fill": 58652.20, "formatted_filled": 0.00800000},
+    {"id": 6, "side": "Sell", "avg_fill": 58901.30, "formatted_filled": 0.00300000},
+    {"id": 7, "side": "Sell", "avg_fill": 	58695.50, "formatted_filled": 0.00200000},
+    {"id": 8, "side": "Sell", "avg_fill": 	58725.60, "formatted_filled": 0.00400000},
+    {"id": 9, "side": "Sell", "avg_fill": 58746.80, "formatted_filled": 0.00800000},
+    {"id": 10, "side": "Buy", "avg_fill": 56917.00, "formatted_filled": 0.00300000},
+    {"id": 11, "side": "Buy", "avg_fill":  55500.00, "formatted_filled": 0.00400000},
+    {"id": 12, "side": "Sell", "avg_fill": 57862.50, "formatted_filled": 0.00900000},
+    {"id": 13, "side": "Buy", "avg_fill": 54198.10, "formatted_filled": 0.00400000},
+    {"id": 14, "side": "Buy", "avg_fill": 	57167.20, "formatted_filled": 0.00400000},
+    {"id": 15, "side": "Buy", "avg_fill": 	60319.70, "formatted_filled": 0.00300000},
+    {"id": 16, "side": "Buy", "avg_fill": 	56500.00, "formatted_filled": 0.00400000},
+    {"id": 17, "side": "Buy", "avg_fill": 	61580.40, "formatted_filled": 0.00400000}
 ]
 
 quantity_buys = 0

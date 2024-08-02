@@ -7,6 +7,7 @@ from .models import TradeUploadBlofin
 from .serializers import FileUploadSerializer, SaveTradeSerializer
 from trades_upload_csv.exchange import BloFinHandler
 from trades_upload_csv.utils import process_invalid_data
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -16,45 +17,9 @@ class CsvTradeView(generics.ListAPIView):
 
     def get_queryset(self):
         # Return the queryset ordered by order_time
+        handler = BloFinHandler()
+        handler.match_trades()
         return TradeUploadBlofin.objects.all().order_by('-order_time')
-
-    def list(self, request, *args, **kwargs):
-        # Call the parent method to get the paginated response
-        response = super().list(request, *args, **kwargs)
-
-        # Calculate the total filled quantities for buys and sells
-        buys_filled, sells_filled = self.calculate_filled_quantities()
-
-        # Log the results to the terminal
-        logger.info(f'Total BTC Bought (Filled): {buys_filled}')
-        logger.info(f'Total BTC Sold (Filled): {sells_filled}')
-        logger.info(f'Remainder (Buys - Sells): {buys_filled - sells_filled}')
-
-        # Add calculated data to the response data
-        response.data.update({
-            "buys_filled": buys_filled,
-            "sells_filled": sells_filled,
-            "remainder": buys_filled - sells_filled
-        })
-
-        return response
-
-    def calculate_filled_quantities(self):
-        # Query all trades ordered by order_time
-        trades = self.get_queryset()
-
-        # Initialize totals
-        buys_filled = 0
-        sells_filled = 0
-
-        # Iterate over trades and compute filled quantities
-        for trade in trades:
-            if trade.side.lower() == 'buy':
-                buys_filled += trade.filled
-            elif trade.side.lower() == 'sell':
-                sells_filled += trade.filled
-
-        return buys_filled, sells_filled
 
 
 class UploadFileView(generics.CreateAPIView):
@@ -71,6 +36,7 @@ class UploadFileView(generics.CreateAPIView):
         # Determine the handler based on the exchange
         if exchange == 'BloFin':
             handler = BloFinHandler()
+            handler.match_trades()
         else:
             return Response({"error": "Sorry, under construction."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -96,9 +62,5 @@ class UploadFileView(generics.CreateAPIView):
             "status": "success",
             "message": f"{new_trades_count} new trades added, {duplicates_count} duplicates found, {canceled_count} canceled trades ignored."
         }
-
-        if new_trades_count == 0 and duplicates_count == 0 and canceled_count > 0:
-            response_message["status"] = "info"
-            response_message["message"] = "All trades are canceled. No trades were added."
 
         return Response(response_message, status=status.HTTP_201_CREATED)

@@ -46,7 +46,7 @@ def process_invalid_data(reader, handler, user, exchange):
         # Handle canceled trades
         if trade_status == 'Canceled':
             canceled_count += 1
-            logger.info(f"Row with status 'Canceled' skipped: {row}")
+            # logger.info(f"Row with status 'Canceled' skipped: {row}")
             continue  # Skip the rest of the loop for canceled trades
 
         # Process the row for non-canceled trades

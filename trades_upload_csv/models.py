@@ -35,7 +35,12 @@ class TradeUploadBlofin(models.Model):
     exchange = models.CharField(
         max_length=100, choices=EXCHANGE_CHOICES, default='')
     # pairing_id = models.CharField(max_length=50, null=True, blank=True)
-    is_open = models.BooleanField(default=True)
+    is_open = models.BooleanField(default=None)
+    is_matched = models.BooleanField(default=None)
+    # Many-to-many relationships for matched trades
+    # matched_trades = models.ManyToManyField(
+    #     'self', symmetrical=False, related_name='matching_trades', blank=True
+    # )
 
     class Meta:
         ordering = ['-order_time']

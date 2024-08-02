@@ -20,7 +20,7 @@ class SaveTradeSerializer(serializers.ModelSerializer):
         model = TradeUploadBlofin
         fields = ['id', 'owner', 'underlying_asset', 'margin_mode',
                   'leverage', 'order_time', 'side', 'formatted_avg_fill', 'last_price',
-                  'formatted_filled', 'pnl', 'formatted_pnl_percentage', 'fee', 'exchange', 'trade_status', 'is_open']
+                  'formatted_filled', 'pnl', 'formatted_pnl_percentage', 'fee', 'exchange', 'trade_status', 'is_open', 'is_matched']
 
     def get_formatted_avg_fill(self, obj):
         """Format avg_fill with conditional decimal places."""
