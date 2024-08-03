@@ -105,7 +105,7 @@ class BloFinHandler:
 
     def match_trades(self):
         # Fetch all trades
-        trades = TradeUploadBlofin.objects.all()
+        trades = TradeUploadBlofin.objects.all(owner=user)
 
         # Group trades by underlying asset
         asset_groups = {}
@@ -182,7 +182,7 @@ class BloFinHandler:
 
             # Handle unmatched trades
             unmatched_trades = TradeUploadBlofin.objects.filter(
-                underlying_asset=asset, is_matched=False)
+                owner=user, underlying_asset=asset, is_matched=False)
             print(f"Unmatched Trades: {unmatched_trades.count()}")
             for trade in unmatched_trades:
                 print(f"  Unmatched Trade ID={trade.id}, Filled={

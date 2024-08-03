@@ -33,11 +33,8 @@ class UploadFileView(generics.CreateAPIView):
 
         exchange = serializer.validated_data.get('exchange', None)
 
-        # Determine the handler based on the exchange
-        if exchange == 'BloFin':
-            handler = BloFinHandler()
-            handler.match_trades()
-        else:
+        # Validate exchange type
+        if exchange != 'BloFin':
             return Response({"error": "Sorry, under construction."}, status=status.HTTP_400_BAD_REQUEST)
 
         reader = pd.read_csv(file)
@@ -54,8 +51,12 @@ class UploadFileView(generics.CreateAPIView):
             return Response({"error": f"Unexpected columns found: {', '.join(unexpected_cols)}"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Use the utility function to process invalid_data and count the results
+        handler = BloFinHandler()
         new_trades_count, duplicates_count, canceled_count = process_invalid_data(
             reader, handler, user, exchange)
+
+        # Match trades after processing and saving
+        handler.match_trades()
 
         # Prepare the response message
         response_message = {
