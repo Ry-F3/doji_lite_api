@@ -1,8 +1,10 @@
 from decimal import Decimal, DivisionByZero,  InvalidOperation
 from datetime import datetime
 from trades_upload_csv.utils import convert_to_boolean, convert_to_decimal
+from trades_upload_csv.calculations import calculate_trade_pnl_and_percentage
+from trades_upload_csv.api_handler import fetch_quote
 from .models import TradeUploadBlofin
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator, EmptyPage
 from django.utils import timezone
 import requests
 import logging
@@ -35,7 +37,11 @@ class BloFinHandler:
 
             underlying_asset = row['Underlying Asset']
 
-            if underlying_asset != 'WIFUSDT':
+            # Define a set of assets to exclude
+            excluded_assets = {'WIFUSDT', 'BOMEUSDT'}
+
+            # Check if the underlying asset is in the excluded list
+            if underlying_asset in excluded_assets:
                 return None
 
             avg_fill = convert_to_decimal(row['Avg Fill'])
@@ -48,7 +54,32 @@ class BloFinHandler:
             reduce_only = convert_to_boolean(row['Reduce-only'])
 
             is_matched = False
-            is_open = True
+            is_open = False
+
+            if is_open:
+                symbol = row.get('Underlying Asset', '')
+                current_price_data = fetch_quote(symbol)
+                current_price = Decimal('0.0')
+
+                if current_price_data:
+                    # Get the first item from the list
+                    current_price_data = current_price_data[0]
+                    current_price = convert_to_decimal(
+                        current_price_data.get('price', '0.0'))
+
+                leverage = convert_to_decimal(row.get('Leverage', '1.0'))
+                long_short = row.get('Side', 'Unknown')
+
+                try:
+                    pnl_percentage, pnl = calculate_trade_pnl_and_percentage(
+                        current_price, avg_fill, leverage, long_short, filled
+                    )
+                    price = current_price
+                except DivisionByZero:
+                    logger.error(f"Division by zero error for trade: {row}")
+                    pnl_percentage, pnl = Decimal('0.0'), Decimal('0.0')
+            else:
+                price = price
 
             # Check if a trade with the same attributes already exists
             if TradeUploadBlofin.objects.filter(
@@ -77,7 +108,8 @@ class BloFinHandler:
                 trade_status=row.get('Status', None),
                 exchange=exchange,
                 is_open=is_open,
-                is_matched=is_matched
+                is_matched=is_matched,
+
             )
             return trade_upload_csv
 
@@ -103,9 +135,9 @@ class BloFinHandler:
 
         return new_trades, duplicates_count
 
-    def match_trades(self):
+    def match_trades(self, owner):
         # Fetch all trades
-        trades = TradeUploadBlofin.objects.all(owner=user)
+        trades = TradeUploadBlofin.objects.filter(owner=owner)
 
         # Group trades by underlying asset
         asset_groups = {}
@@ -117,7 +149,7 @@ class BloFinHandler:
 
         # Process each asset group separately
         for asset, trades in asset_groups.items():
-            print(f"\nProcessing Asset: {asset}")
+            # print(f"\nProcessing Asset: {asset}")
 
             buy_stack = []
             matches = []
@@ -182,7 +214,7 @@ class BloFinHandler:
 
             # Handle unmatched trades
             unmatched_trades = TradeUploadBlofin.objects.filter(
-                owner=user, underlying_asset=asset, is_matched=False)
+                owner=owner, underlying_asset=asset, is_matched=False)
             print(f"Unmatched Trades: {unmatched_trades.count()}")
             for trade in unmatched_trades:
                 print(f"  Unmatched Trade ID={trade.id}, Filled={
@@ -197,3 +229,123 @@ class BloFinHandler:
                   quantity_sells / 10000000:.3f}")
             print(f"Quantity Remaining: {
                 (quantity_buys - quantity_sells) / 10000000:.3f}")
+
+    def update_trade_prices_on_upload(self, owner):
+        """Update prices and calculate PnL and percentage for all open trades."""
+        open_trades = TradeUploadBlofin.objects.filter(
+            is_open=True, owner=owner).order_by('order_time')
+
+        # logger.debug(f"Updating prices for {open_trades.count()} open trades")
+
+        api_request_count = 0
+
+        for trade in open_trades:
+            try:
+                symbol = trade.underlying_asset
+                current_price_data = fetch_quote(symbol)
+                api_request_count += 1
+
+                current_price = Decimal('0.0')
+                if current_price_data:
+                    current_price = Decimal(
+                        current_price_data[0].get('price', '0.0'))
+
+                trade.price = current_price
+
+                avg_fill = trade.avg_fill
+                leverage = trade.leverage
+                long_short = trade.side
+                filled = trade.filled
+
+                try:
+                    pnl_percentage, pnl = calculate_trade_pnl_and_percentage(
+                        current_price, avg_fill, leverage, long_short, filled
+                    )
+                except DivisionByZero:
+                    logger.error(f"Division by zero error for trade: {trade}")
+                    pnl_percentage, pnl = Decimal('0.0'), Decimal('0.0')
+
+                trade.pnl_percentage = pnl_percentage
+                trade.pnl = pnl
+
+                trade.save()
+                # logger.debug(f"Updated trade: {trade.id}, price: {
+                #              current_price}, PnL: {pnl}, PnL %: {pnl_percentage}")
+
+            except Exception as e:
+                logger.error(
+                    f"Error updating trade prices for symbol {symbol}: {e}")
+
+    def update_trade_prices_by_page(self, owner, page=1, symbols=[]):
+        """Update prices and calculate PnL and percentage for trades on a specific page."""
+        open_trades = TradeUploadBlofin.objects.filter(
+            is_open=True, owner=owner).order_by('order_time')
+
+        paginator = Paginator(open_trades, per_page=10)
+        try:
+            paginated_trades = paginator.get_page(page)
+            symbols_by_page = {
+                trade.underlying_asset for trade in paginated_trades}
+            logger.debug(f"Page {page} symbols to process: {symbols_by_page}")
+        except EmptyPage:
+            logger.error(f"Page {page} is empty.")
+            return
+
+        # Fetch live prices for the symbols on the current page
+        current_prices = {}
+        for symbol in symbols_by_page:
+            if symbol not in symbols:
+                continue
+
+            logger.debug(f"Fetching price for symbol: {
+                         symbol} on page: {page}")
+            current_price_data = fetch_quote(symbol)
+
+            if current_price_data:
+                current_price = Decimal(
+                    current_price_data[0].get('price', '0.0'))
+                current_prices[symbol] = current_price
+                logger.debug(f"Updated price for symbol {
+                             symbol}: {current_price}")
+            else:
+                current_prices[symbol] = Decimal('0.0')
+                logger.debug(f"No price data for symbol {symbol}")
+
+        # Update trades with the fetched prices
+        for trade in paginated_trades:
+            if trade.underlying_asset in current_prices:
+                self.update_trade(
+                    trade, current_prices[trade.underlying_asset])
+
+        logger.debug(f"Updated prices for page {page}")
+
+    def update_trade(self, trade, current_price):
+        """Update trade attributes based on the current price and save."""
+        avg_fill = trade.avg_fill
+        leverage = trade.leverage
+        long_short = trade.side
+        filled = trade.filled
+
+        try:
+            pnl_percentage, pnl = calculate_trade_pnl_and_percentage(
+                current_price, avg_fill, leverage, long_short, filled
+            )
+        except DivisionByZero:
+            logger.error(f"Division by zero error for trade: {trade}")
+            pnl_percentage, pnl = Decimal('0.0'), Decimal('0.0')
+
+        trade.price = current_price
+        trade.pnl_percentage = pnl_percentage
+        trade.pnl = pnl
+        trade.save()
+        logger.debug(f"Updated trade: {trade.id}, price: {
+                     current_price}, PnL: {pnl}, PnL %: {pnl_percentage}")
+
+    def count_open_trades_for_price_fetch(self):
+        # Count trades that are open and need price updates
+        open_trades_needing_update = TradeUploadBlofin.objects.filter(
+            is_open=True,
+        ).count()
+        logger.debug(f"Open trades needing update: {
+                     open_trades_needing_update}")
+        return open_trades_needing_update

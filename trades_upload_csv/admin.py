@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .models import TradeUploadBlofin
+from decimal import Decimal
 
 
 class TradeUploadCsvAdmin(admin.ModelAdmin):
@@ -10,14 +11,15 @@ class TradeUploadCsvAdmin(admin.ModelAdmin):
         'leverage',
         'order_time',
         'side',
-        'formatted_avg_fill',  # Use the custom method for avg_fill
-        'formatted_filled',    # Use the custom method for filled
-        'formatted_pnl',       # Use the custom method for pnl
-        'formatted_pnl_percentage',  # Use the custom method for pnl_percentage
+        'formatted_avg_fill',
+        'formatted_price',
+        'formatted_filled',
+        'formatted_pnl',
+        'formatted_pnl_percentage',
         'fee',
         'trade_status',
         'is_open',
-        'is_matched'
+        'is_matched',
     )
     list_filter = (
         'owner',
@@ -38,47 +40,91 @@ class TradeUploadCsvAdmin(admin.ModelAdmin):
     )
     ordering = ('-order_time',)  # Order by order_time descending by default
 
+    def get_decimal_places(self, price):
+        """Determine the number of decimal places needed for the given price."""
+        if price is None:
+            return 2  # Default decimal places if price is None
+
+        abs_price = abs(price)
+        if abs_price < 0.01:
+            return 4
+        elif abs_price < 1:
+            return 3
+        elif abs_price < 10:
+            return 2
+        else:
+            return 2
+
     def formatted_avg_fill(self, obj):
         """Format avg_fill with conditional decimal places."""
         if obj.avg_fill is not None:
-            # Format with 2 decimals if avg_fill >= 1, otherwise with 6 decimals
-            if obj.avg_fill >= 1:
-                return f"{obj.avg_fill:.2f}"
-            else:
-                return f"{obj.avg_fill:.8f}"
+            avg_fill_value = Decimal(obj.avg_fill)
+            decimal_places = self.get_decimal_places(avg_fill_value)
+            return f"{avg_fill_value:.{decimal_places}f}"
         return 'N/A'
 
     def formatted_filled(self, obj):
-        """Format quantity with conditional decimal places."""
+        """Format filled with conditional decimal places."""
         if obj.filled is not None:
-            if obj.filled >= 1:
-                return f"{obj.filled:.2f}"
-            else:
-                return f"{obj.filled:.8f}"
+            filled_value = Decimal(obj.filled)
+            decimal_places = self.get_decimal_places(filled_value)
+            return f"{filled_value:.{decimal_places}f}"
         return 'N/A'
 
     def formatted_pnl(self, obj):
         """Format pnl based on conditions."""
-        if obj.side == 'Buy':
-            if obj.pnl == 0.00:
-                return '--'
-            else:
-                return f"{obj.pnl:.2f}"
-        return f"{obj.pnl:.2f}" if obj.pnl is not None else 'N/A'
+        # Check if avg_fill equals price and set to '--'
+        if obj.avg_fill == obj.price:
+            return '--'
+
+        # Check if trade is closed, price is 0.0, and pnl is 0.0
+        if not obj.is_open and obj.price == Decimal('0.0') and obj.pnl == Decimal('0.0'):
+            return '--'
+
+        # Check if pnl is not None and format it
+        if obj.pnl is not None:
+            pnl_value = Decimal(obj.pnl)
+            decimal_places = self.get_decimal_places(pnl_value)
+            return f"{pnl_value:.{decimal_places}f}"
+
+        return 'N/A'
 
     def formatted_pnl_percentage(self, obj):
         """Format pnl_percentage based on conditions."""
-        if obj.side == 'Buy':
-            if obj.pnl_percentage == 0.00:
-                return '--'
-            else:
-                return f"{obj.pnl_percentage:.2f}%"
+        # Check if avg_fill equals price and set to '--'
+        if obj.avg_fill == obj.price:
+            return '--'
+
+        # Check if trade is closed, price is 0.0, and pnl_percentage is 0.0
+        if not obj.is_open and obj.price == Decimal('0.0') and obj.pnl_percentage == Decimal('0.0'):
+            return '--'
+
+        # Check if pnl_percentage is not None and format it
         return f"{obj.pnl_percentage:.2f}%" if obj.pnl_percentage is not None else 'N/A'
+
+    def formatted_price(self, obj):
+        """Show price based on is_open status and automatic decimal places."""
+
+        # Check if avg_fill equals price and set to '--'
+        if obj.avg_fill == obj.price:
+            return '--'
+
+        # Check if trade is closed and price is 0.0
+        if not obj.is_open and obj.price == Decimal('0.0'):
+            return '--'
+
+        # Check if price is not None and format it
+        if obj.price is not None:
+            decimal_places = self.get_decimal_places(obj.price)
+            return f"{obj.price:.{decimal_places}f}"
+
+        return 'N/A'
 
     formatted_avg_fill.short_description = 'Avg Fill'  # Label for the column
     formatted_filled.short_description = 'Filled'
     formatted_pnl.short_description = 'PNL'
     formatted_pnl_percentage.short_description = 'PNL %'
+    formatted_price.short_description = 'Price'
 
 
 admin.site.register(TradeUploadBlofin, TradeUploadCsvAdmin)
