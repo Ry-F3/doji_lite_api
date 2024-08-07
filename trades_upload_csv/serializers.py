@@ -46,8 +46,8 @@ class SaveTradeSerializer(serializers.ModelSerializer):
             avg_fill_value = Decimal(obj.avg_fill)
             decimal_places = self.get_decimal_places(avg_fill_value)
             formatted_value = f"{avg_fill_value:.{decimal_places}f}"
-            print(f"Raw avg_fill: {avg_fill_value}, Formatted avg_fill: {
-                  formatted_value}")
+            # print(f"Raw avg_fill: {avg_fill_value}, Formatted avg_fill: {
+            #       formatted_value}")
             return formatted_value
         return 'N/A'
 
@@ -57,8 +57,8 @@ class SaveTradeSerializer(serializers.ModelSerializer):
             filled_value = Decimal(obj.filled)
             decimal_places = self.get_decimal_places(filled_value)
             formatted_value = f"{filled_value:.{decimal_places}f}"
-            print(f"Raw filled: {filled_value}, Formatted filled: {
-                  formatted_value}")
+            # print(f"Raw filled: {filled_value}, Formatted filled: {
+            #       formatted_value}")
             return formatted_value
         return 'N/A'
 
@@ -70,7 +70,7 @@ class SaveTradeSerializer(serializers.ModelSerializer):
             pnl_value = Decimal(obj.pnl)
             decimal_places = self.get_decimal_places(pnl_value)
             formatted_value = f"{pnl_value:.{decimal_places}f}"
-            print(f"Raw pnl: {pnl_value}, Formatted pnl: {formatted_value}")
+            # print(f"Raw pnl: {pnl_value}, Formatted pnl: {formatted_value}")
             return formatted_value
         return 'N/A'
 
@@ -79,8 +79,8 @@ class SaveTradeSerializer(serializers.ModelSerializer):
         if not obj.is_open and obj.price == Decimal('0.0') and obj.pnl_percentage == Decimal('0.0'):
             return '--'
         formatted_value = f"{obj.pnl_percentage:.2f}%"
-        print(f"Raw pnl_percentage: {
-              obj.pnl_percentage}, Formatted pnl_percentage: {formatted_value}")
+        # print(f"Raw pnl_percentage: {
+        #       obj.pnl_percentage}, Formatted pnl_percentage: {formatted_value}")
         return formatted_value
 
     def get_last_price(self, obj):
@@ -98,8 +98,8 @@ class SaveTradeSerializer(serializers.ModelSerializer):
         if obj.price is not None:
             decimal_places = self.get_decimal_places(obj.price)
             formatted_value = f"{obj.price:.{decimal_places}f}"
-            print(f"Raw price: {obj.price}, Formatted price: {
-                  formatted_value}")
+            # print(f"Raw price: {obj.price}, Formatted price: {
+            #       formatted_value}")
             return formatted_value
 
         return 'N/A'

@@ -39,13 +39,6 @@ def convert_to_decimal(value):
     return Decimal(value)  # Convert directly if already numeric
 
 
-# Example usage
-print(convert_to_decimal("-123.45"))  # Decimal('-123.45')
-print(convert_to_decimal("Market"))   # Decimal('0.0')
-print(convert_to_decimal("--"))       # Decimal('0.0')
-print(convert_to_decimal("123abc"))   # Decimal('123.0')
-
-
 def convert_to_boolean(value):
     """Convert value to Boolean."""
     bool_map = {"Y": True, "N": False}

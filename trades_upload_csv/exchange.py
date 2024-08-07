@@ -336,15 +336,15 @@ class BloFinHandler:
                 current_price, avg_fill, leverage, long_short, filled
             )
         except DivisionByZero:
-            logger.error(f"Division by zero error for trade: {trade}")
+            # logger.error(f"Division by zero error for trade: {trade}")
             pnl_percentage, pnl = Decimal('0.0'), Decimal('0.0')
 
         trade.price = current_price
         trade.pnl_percentage = pnl_percentage
         trade.pnl = pnl
         trade.save()
-        logger.debug(f"Updated trade: {trade.id}, price: {
-                     current_price}, PnL: {pnl}, PnL %: {pnl_percentage}")
+        # logger.debug(f"Updated trade: {trade.id}, price: {
+        #              current_price}, PnL: {pnl}, PnL %: {pnl_percentage}")
 
     def count_open_trades_for_price_fetch(self):
         # Count trades that are open and need price updates

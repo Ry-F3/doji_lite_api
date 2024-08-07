@@ -39,9 +39,9 @@ class TradeUploadBlofin(models.Model):
     is_matched = models.BooleanField(default=None)
     last_updated = models.DateTimeField(auto_now=True)
     previous_net_pnl = models.DecimalField(
-        max_digits=20, decimal_places=10, null=True, blank=True, default=Decimal('0.0'))
+        max_digits=20, decimal_places=10, null=True, blank=True)
     previous_total_pnl_per_asset = models.DecimalField(
-        max_digits=20, decimal_places=10, null=True, blank=True, default=Decimal('0.0'))
+        max_digits=20, decimal_places=10, null=True, blank=True)
 
     class Meta:
         ordering = ['-order_time']
