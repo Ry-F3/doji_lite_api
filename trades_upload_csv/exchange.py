@@ -37,11 +37,14 @@ class BloFinHandler:
 
             underlying_asset = row['Underlying Asset']
 
-            # Define a set of assets to exclude
-            excluded_assets = {'WIFUSDT', 'BOMEUSDT'}
+            # # Define a set of assets to exclude
+            # excluded_assets = {'WIFUSDT', 'BOMEUSDT'}
 
-            # Check if the underlying asset is in the excluded list
-            if underlying_asset in excluded_assets:
+            # # Check if the underlying asset is in the excluded list
+            # if underlying_asset in excluded_assets:
+            #     return excluded_assets
+
+            if underlying_asset != 'BTCUSDT':
                 return None
 
             avg_fill = convert_to_decimal(row['Avg Fill'])
@@ -235,7 +238,7 @@ class BloFinHandler:
         open_trades = TradeUploadBlofin.objects.filter(
             is_open=True, owner=owner).order_by('order_time')
 
-        # logger.debug(f"Updating prices for {open_trades.count()} open trades")
+        logger.debug(f"Updating prices for {open_trades.count()} open trades")
 
         api_request_count = 0
 

@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.conf import settings
 from rest_framework import serializers
 
+
 def fetch_quote(symbol):
     api_url = f'https://financialmodelingprep.com/api/v3/quote/{symbol}'
     params = {
@@ -21,8 +22,9 @@ def fetch_quote(symbol):
             return data[0]
     return None
 
+
 def fetch_profile(symbol):
-    api_url = f'https://financialmodelingprep.com/api/v3/profile/{symbol}'
+    api_url = f'https://financialmodelingprep.com/api/v3/quote/{symbol}'
     params = {
         'apikey': settings.FMP_API_KEY,
     }

@@ -10,27 +10,24 @@ from trades_upload_csv.utils import process_invalid_data
 import pandas as pd
 from django.contrib.auth.decorators import login_required
 from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models import Count, Q, Sum
 
 logger = logging.getLogger(__name__)
 
 
 class CsvTradeView(generics.ListAPIView):
     serializer_class = SaveTradeSerializer
+
+    queryset = TradeUploadBlofin.objects.all().order_by('-order_time')
+
     filter_backends = [DjangoFilterBackend,
                        filters.OrderingFilter, filters.SearchFilter]
-    search_fields = ['underlying_asset', 'side']
-    ordering_fields = ['order_time', 'underlying_asset',
+    search_fields = ['owner', 'underlying_asset', 'side']
+    ordering_fields = ['owner', 'order_time', 'underlying_asset',
                        'side', 'is_open', 'is_matched']
     ordering = ['-order_time']
 
-    def get_queryset(self):
-        queryset = TradeUploadBlofin.objects.all()
-
-        # Apply filtering based on search fields and ordering
-        return queryset.order_by(*self.request.query_params.getlist('ordering', self.ordering))
-
     def get(self, request, *args, **kwargs):
-        owner = request.user
         page = request.query_params.get('page', 1)
 
         try:
@@ -41,21 +38,22 @@ class CsvTradeView(generics.ListAPIView):
         logger.debug(f"Processing page: {page}")
 
         handler = BloFinHandler()
-        queryset = self.get_queryset()
+        queryset = self.filter_queryset(self.get_queryset())
 
-        # Extract symbols for the current, previous, and next pages
+        # Paginate queryset
+        self.pagination_class.page = page
         paginated_queryset = self.paginate_queryset(queryset)
+
+        # Extract symbols for the current page
         symbols_by_page = {
-            trade.underlying_asset for trade in paginated_queryset}
+            trade.underlying_asset for trade in paginated_queryset} if paginated_queryset else set()
 
         # Determine page numbers for previous and next pages
         prev_page = max(1, page - 1)
         next_page = page + 1
 
         logger.debug(f"Page {page} symbols to process: {symbols_by_page}")
-        print("------------------------------------------------------------------")
         logger.debug(f"Previous page: {prev_page}, Next page: {next_page}")
-        print("------------------------------------------------------------------")
 
         # Fetch symbols for previous and next pages
         prev_symbols = self.get_symbols_for_page(prev_page, queryset)
@@ -67,15 +65,15 @@ class CsvTradeView(generics.ListAPIView):
 
         # Update trade prices for the current page
         handler.update_trade_prices_by_page(
-            owner, page, symbols=list(symbols_by_page))
+            request.user, page, symbols=list(symbols_by_page))
 
         # Update trade prices for previous and next pages if necessary
         if update_prev_page:
             handler.update_trade_prices_by_page(
-                owner, prev_page, symbols=list(prev_symbols))
+                request.user, prev_page, symbols=list(prev_symbols))
         if update_next_page:
             handler.update_trade_prices_by_page(
-                owner, next_page, symbols=list(next_symbols))
+                request.user, next_page, symbols=list(next_symbols))
 
         # Serialize and return the paginated results
         if paginated_queryset:
@@ -100,7 +98,7 @@ class CsvTradeView(generics.ListAPIView):
         """Check if there are any open trades on a specific page."""
         self.pagination_class.page = page
         paginated_queryset = self.paginate_queryset(queryset)
-        return any(trade.is_open for trade in paginated_queryset) if paginated_queryset else False
+        return any(trade.is_open > 0 for trade in paginated_queryset) if paginated_queryset else False
 
 
 class UploadFileView(generics.CreateAPIView):
