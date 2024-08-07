@@ -15,11 +15,14 @@ class TradeUploadCsvAdmin(admin.ModelAdmin):
         'formatted_price',
         'formatted_filled',
         'formatted_pnl',
+        'formatted_total_pnl_per_asset',
+        'formatted_net_pnl',
         'formatted_pnl_percentage',
         'fee',
         'trade_status',
         'is_open',
         'is_matched',
+        'last_updated'
     )
     list_filter = (
         'owner',
@@ -120,11 +123,29 @@ class TradeUploadCsvAdmin(admin.ModelAdmin):
 
         return 'N/A'
 
+    def formatted_total_pnl_per_asset(self, obj):
+        """Format previous_total_pnl_per_asset as PNL ASSET CLASS."""
+        if obj.previous_total_pnl_per_asset is not None:
+            pnl_value = Decimal(obj.previous_total_pnl_per_asset)
+            decimal_places = self.get_decimal_places(pnl_value)
+            return f"{pnl_value:.{decimal_places}f}"
+        return 'N/A'
+
+    def formatted_net_pnl(self, obj):
+        """Format previous_net_pnl as TOTAL PNL."""
+        if obj.previous_net_pnl is not None:
+            pnl_value = Decimal(obj.previous_net_pnl)
+            decimal_places = self.get_decimal_places(pnl_value)
+            return f"{pnl_value:.{decimal_places}f}"
+        return 'N/A'
+
     formatted_avg_fill.short_description = 'Avg Fill'  # Label for the column
     formatted_filled.short_description = 'Filled'
     formatted_pnl.short_description = 'PNL'
     formatted_pnl_percentage.short_description = 'PNL %'
     formatted_price.short_description = 'Price'
+    formatted_total_pnl_per_asset.short_description = 'PNL ASSET CLASS'
+    formatted_net_pnl.short_description = 'TOTAL PNL'
 
 
 admin.site.register(TradeUploadBlofin, TradeUploadCsvAdmin)

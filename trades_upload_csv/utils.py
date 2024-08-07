@@ -18,15 +18,32 @@ def convert_to_decimal(value):
         return Decimal('0.0')  # Set dummy value for '--'
 
     if isinstance(value, str):
+        # Handle potential negative sign and numeric characters
+        value = value.strip()
+        if value.startswith('-'):
+            sign = -1
+            value = value[1:]  # Remove the negative sign for processing
+        else:
+            sign = 1
+
         # Remove any non-numeric characters (except decimal point)
-        numeric_value = re.sub(r'[^\d.]', '', value)
+        numeric_value = re.sub(r'[^\d.-]', '', value)
+
         try:
-            return Decimal(numeric_value)
-        except:
+            decimal_value = Decimal(numeric_value)
+            return decimal_value * sign
+        except (ValueError, InvalidOperation):
             # Handle conversion errors by returning a default value
             return Decimal('0.0')
 
     return Decimal(value)  # Convert directly if already numeric
+
+
+# Example usage
+print(convert_to_decimal("-123.45"))  # Decimal('-123.45')
+print(convert_to_decimal("Market"))   # Decimal('0.0')
+print(convert_to_decimal("--"))       # Decimal('0.0')
+print(convert_to_decimal("123abc"))   # Decimal('123.0')
 
 
 def convert_to_boolean(value):

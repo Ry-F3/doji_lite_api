@@ -11,6 +11,8 @@ import pandas as pd
 from django.contrib.auth.decorators import login_required
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Count, Q, Sum
+from django.utils import timezone
+
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +31,7 @@ class CsvTradeView(generics.ListAPIView):
 
     def get(self, request, *args, **kwargs):
         page = request.query_params.get('page', 1)
+        owner = request.user
 
         try:
             page = int(page)
@@ -38,6 +41,8 @@ class CsvTradeView(generics.ListAPIView):
         logger.debug(f"Processing page: {page}")
 
         handler = BloFinHandler()
+        handler.update_total_pnl_per_asset(owner)  # Update total PnL per asset
+        net_pnl = handler.update_net_pnl(owner)
         queryset = self.filter_queryset(self.get_queryset())
 
         # Paginate queryset
@@ -48,32 +53,12 @@ class CsvTradeView(generics.ListAPIView):
         symbols_by_page = {
             trade.underlying_asset for trade in paginated_queryset} if paginated_queryset else set()
 
-        # Determine page numbers for previous and next pages
-        prev_page = max(1, page - 1)
-        next_page = page + 1
-
-        logger.debug(f"Page {page} symbols to process: {symbols_by_page}")
-        logger.debug(f"Previous page: {prev_page}, Next page: {next_page}")
-
-        # Fetch symbols for previous and next pages
-        prev_symbols = self.get_symbols_for_page(prev_page, queryset)
-        next_symbols = self.get_symbols_for_page(next_page, queryset)
-
-        # Check if there are any open trades on the previous or next pages
-        update_prev_page = self.has_open_trades(prev_page, queryset)
-        update_next_page = self.has_open_trades(next_page, queryset)
-
         # Update trade prices for the current page
         handler.update_trade_prices_by_page(
             request.user, page, symbols=list(symbols_by_page))
 
-        # Update trade prices for previous and next pages if necessary
-        if update_prev_page:
-            handler.update_trade_prices_by_page(
-                request.user, prev_page, symbols=list(prev_symbols))
-        if update_next_page:
-            handler.update_trade_prices_by_page(
-                request.user, next_page, symbols=list(next_symbols))
+        # Save updated trades
+        self.save_updated_trades()
 
         # Serialize and return the paginated results
         if paginated_queryset:
@@ -100,6 +85,26 @@ class CsvTradeView(generics.ListAPIView):
         paginated_queryset = self.paginate_queryset(queryset)
         return any(trade.is_open > 0 for trade in paginated_queryset) if paginated_queryset else False
 
+    def save_updated_trades(self):
+        """Save updated trades to the database."""
+        # Define the timestamp for filtering updated trades
+        last_update_threshold = timezone.now() - timezone.timedelta(minutes=5)
+
+        # Fetch trades updated after the threshold and are open
+        trades_to_update = TradeUploadBlofin.objects.filter(
+            last_updated__gte=last_update_threshold,
+            is_open=True
+        )
+
+        # Iterate through trades and save changes
+        for trade in trades_to_update:
+            try:
+                # Optionally, update fields here if needed before saving
+                trade.save()  # Save the trade with updated details
+                logger.info(f"Updated trade saved: {trade.id}")
+            except Exception as e:
+                logger.error(f"Error saving updated trade {trade.id}: {e}")
+
 
 class UploadFileView(generics.CreateAPIView):
     serializer_class = FileUploadSerializer
@@ -117,6 +122,18 @@ class UploadFileView(generics.CreateAPIView):
             return Response({"error": "Sorry, under construction."}, status=status.HTTP_400_BAD_REQUEST)
 
         reader = pd.read_csv(file)
+        print("Data read from file:")
+
+        # Filter for rows with 'WIFUSDT' as the underlying asset
+        wifusdt_data = reader[reader['Underlying Asset'] == 'WIFUSDT']
+
+        # Print the filtered data
+        if not wifusdt_data.empty:
+            print("Filtered WIFUSDT Data:")
+            print(wifusdt_data[['Underlying Asset', 'PNL']])
+        else:
+            print("No data found for WIFUSDT.")
+
         required_columns = {'Underlying Asset', 'Margin Mode', 'Leverage', 'Order Time', 'Side', 'Avg Fill',
                             'Price', 'Filled', 'Total', 'PNL', 'PNL%', 'Fee', 'Order Options', 'Reduce-only', 'Status'}
 
@@ -129,6 +146,10 @@ class UploadFileView(generics.CreateAPIView):
         if unexpected_cols:
             return Response({"error": f"Unexpected columns found: {', '.join(unexpected_cols)}"}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Print columns of the dataframe for verification
+        print("Columns in the data:")
+        print(reader.columns.tolist())
+
         # Use the utility function to process invalid_data and count the results
         handler = BloFinHandler()
         new_trades_count, duplicates_count, canceled_count = process_invalid_data(
@@ -137,6 +158,9 @@ class UploadFileView(generics.CreateAPIView):
         # Match trades after processing and saving
         handler.match_trades(owner)
         handler.update_trade_prices_on_upload(owner)
+
+        handler.update_total_pnl_per_asset(owner)  # Update total PnL per asset
+        net_pnl = handler.update_net_pnl(owner)
 
         # Count the number of open trades that need live price fetches
         live_price_fetches_count = handler.count_open_trades_for_price_fetch()

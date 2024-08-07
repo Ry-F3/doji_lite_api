@@ -3,9 +3,11 @@ from datetime import datetime
 from trades_upload_csv.utils import convert_to_boolean, convert_to_decimal
 from trades_upload_csv.calculations import calculate_trade_pnl_and_percentage
 from trades_upload_csv.api_handler import fetch_quote
+from trades_upload_csv.utils import convert_to_decimal
 from .models import TradeUploadBlofin
 from django.core.paginator import Paginator, EmptyPage
 from django.utils import timezone
+from django.db.models import Sum
 import requests
 import logging
 import pytz
@@ -37,15 +39,15 @@ class BloFinHandler:
 
             underlying_asset = row['Underlying Asset']
 
-            # # Define a set of assets to exclude
-            # excluded_assets = {'WIFUSDT', 'BOMEUSDT'}
+            # Define a set of assets to exclude
+            excluded_assets = {'BOMEUSDT', 'POPCATUSDT'}
 
-            # # Check if the underlying asset is in the excluded list
-            # if underlying_asset in excluded_assets:
-            #     return excluded_assets
-
-            if underlying_asset != 'BTCUSDT':
+            # Check if the underlying asset is in the excluded list
+            if underlying_asset in excluded_assets:
                 return None
+
+            # if underlying_asset != 'BTCUSDT':
+            #     return None
 
             avg_fill = convert_to_decimal(row['Avg Fill'])
             pnl = convert_to_decimal(row['PNL'])
@@ -352,3 +354,49 @@ class BloFinHandler:
         logger.debug(f"Open trades needing update: {
                      open_trades_needing_update}")
         return open_trades_needing_update
+
+    def update_total_pnl_per_asset(self, owner):
+        """Calculate and update total PnL for each asset."""
+        assets = TradeUploadBlofin.objects.filter(
+            owner=owner).values('underlying_asset').distinct()
+        for asset in assets:
+            self.calculate_and_update_total_pnl_for_asset(
+                owner, asset['underlying_asset'])
+
+    def calculate_and_update_total_pnl_for_asset(self, owner, asset):
+        """Calculate and update the total PnL for a specific asset."""
+        trades = TradeUploadBlofin.objects.filter(
+            owner=owner, underlying_asset=asset)
+        total_pnl = sum(Decimal(trade.pnl or '0.0') for trade in trades)
+
+        # Update the PnL in the database
+        for trade in trades:
+            if trade.previous_total_pnl_per_asset != total_pnl:
+                trade.previous_total_pnl_per_asset = total_pnl
+                trade.save()
+
+        # Return formatted total PnL
+        decimal_places = self.get_decimal_places(total_pnl)
+        return f"{total_pnl:.{decimal_places}f}"
+
+    def update_net_pnl(self, owner):
+        """Calculate and update the net PnL for the owner."""
+        total_pnl = TradeUploadBlofin.objects.filter(owner=owner).aggregate(
+            total_pnl=Sum('pnl')
+        )['total_pnl'] or Decimal('0.0')
+
+        # Assume you want to store net PnL in a separate model or update a specific field
+        # If using the same model:
+        # 1. Fetch all trades and update each one (if that's the requirement):
+        for trade in TradeUploadBlofin.objects.filter(owner=owner):
+            if trade.previous_net_pnl != total_pnl:
+                trade.previous_net_pnl = total_pnl
+                trade.save()
+
+        # Return formatted net PnL
+        decimal_places = self.get_decimal_places(total_pnl)
+        return f"{total_pnl:.{decimal_places}f}"
+
+    def get_decimal_places(self, value):
+        """Helper method to determine the number of decimal places for formatting."""
+        return max(Decimal(value).as_tuple().exponent * -1, 2)

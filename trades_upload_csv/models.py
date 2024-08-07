@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from django.db import models
+from decimal import Decimal
 
 
 class TradeUploadBlofin(models.Model):
@@ -34,14 +35,13 @@ class TradeUploadBlofin(models.Model):
     trade_status = models.CharField(max_length=10)
     exchange = models.CharField(
         max_length=100, choices=EXCHANGE_CHOICES, default='')
-    # pairing_id = models.CharField(max_length=50, null=True, blank=True)
     is_open = models.BooleanField(default=None)
     is_matched = models.BooleanField(default=None)
-
-    # Many-to-many relationships for matched trades
-    # matched_trades = models.ManyToManyField(
-    #     'self', symmetrical=False, related_name='matching_trades', blank=True
-    # )
+    last_updated = models.DateTimeField(auto_now=True)
+    previous_net_pnl = models.DecimalField(
+        max_digits=20, decimal_places=10, null=True, blank=True, default=Decimal('0.0'))
+    previous_total_pnl_per_asset = models.DecimalField(
+        max_digits=20, decimal_places=10, null=True, blank=True, default=Decimal('0.0'))
 
     class Meta:
         ordering = ['-order_time']

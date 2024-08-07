@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import TradeUploadBlofin
+from collections import defaultdict
 from decimal import Decimal
 from django.contrib.auth.models import User
 
@@ -21,7 +22,8 @@ class SaveTradeSerializer(serializers.ModelSerializer):
         model = TradeUploadBlofin
         fields = ['id', 'owner', 'underlying_asset', 'margin_mode',
                   'leverage', 'order_time', 'side', 'formatted_avg_fill', 'last_price',
-                  'formatted_filled', 'formatted_pnl', 'formatted_pnl_percentage', 'fee', 'exchange', 'trade_status', 'is_open', 'is_matched']
+                  'formatted_filled', 'formatted_pnl', 'formatted_pnl_percentage', 'fee', 'exchange',
+                  'trade_status', 'is_open', 'is_matched', 'previous_total_pnl_per_asset', 'previous_net_pnl', 'last_updated']
 
     def get_decimal_places(self, price):
         """Determine the number of decimal places needed for the given price."""
@@ -43,7 +45,10 @@ class SaveTradeSerializer(serializers.ModelSerializer):
         if obj.avg_fill is not None:
             avg_fill_value = Decimal(obj.avg_fill)
             decimal_places = self.get_decimal_places(avg_fill_value)
-            return f"{avg_fill_value:.{decimal_places}f}"
+            formatted_value = f"{avg_fill_value:.{decimal_places}f}"
+            print(f"Raw avg_fill: {avg_fill_value}, Formatted avg_fill: {
+                  formatted_value}")
+            return formatted_value
         return 'N/A'
 
     def get_formatted_filled(self, obj):
@@ -51,7 +56,10 @@ class SaveTradeSerializer(serializers.ModelSerializer):
         if obj.filled is not None:
             filled_value = Decimal(obj.filled)
             decimal_places = self.get_decimal_places(filled_value)
-            return f"{filled_value:.{decimal_places}f}"
+            formatted_value = f"{filled_value:.{decimal_places}f}"
+            print(f"Raw filled: {filled_value}, Formatted filled: {
+                  formatted_value}")
+            return formatted_value
         return 'N/A'
 
     def get_formatted_pnl(self, obj):
@@ -61,14 +69,19 @@ class SaveTradeSerializer(serializers.ModelSerializer):
         if obj.pnl is not None:
             pnl_value = Decimal(obj.pnl)
             decimal_places = self.get_decimal_places(pnl_value)
-            return f"{pnl_value:.{decimal_places}f}"
+            formatted_value = f"{pnl_value:.{decimal_places}f}"
+            print(f"Raw pnl: {pnl_value}, Formatted pnl: {formatted_value}")
+            return formatted_value
         return 'N/A'
 
     def get_formatted_pnl_percentage(self, obj):
         """Format pnl_percentage with conditional formatting based on is_open and price."""
         if not obj.is_open and obj.price == Decimal('0.0') and obj.pnl_percentage == Decimal('0.0'):
             return '--'
-        return f"{obj.pnl_percentage:.2f}%"
+        formatted_value = f"{obj.pnl_percentage:.2f}%"
+        print(f"Raw pnl_percentage: {
+              obj.pnl_percentage}, Formatted pnl_percentage: {formatted_value}")
+        return formatted_value
 
     def get_last_price(self, obj):
         """Format the price with conditional decimal places."""
@@ -84,6 +97,9 @@ class SaveTradeSerializer(serializers.ModelSerializer):
         # Check if price is not None and format it
         if obj.price is not None:
             decimal_places = self.get_decimal_places(obj.price)
-            return f"{obj.price:.{decimal_places}f}"
+            formatted_value = f"{obj.price:.{decimal_places}f}"
+            print(f"Raw price: {obj.price}, Formatted price: {
+                  formatted_value}")
+            return formatted_value
 
         return 'N/A'
