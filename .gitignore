@@ -8,3 +8,5 @@ node_modules/
 .github/
 cloudinary_python.txt
 simulation/
+trade_csv/
+trades/
