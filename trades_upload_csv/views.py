@@ -8,7 +8,7 @@ import pandas as pd
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import TradeUploadBlofin
 from .serializers import FileUploadSerializer, SaveTradeSerializer
-from trades_upload_csv.exchange import BloFinHandler, CsvProcessor, TradeAggregator
+from trades_upload_csv.exchange import BloFinHandler, CsvProcessor, TradeAggregator, TradeUpdater
 from trades_upload_csv.utils import process_invalid_data
 from trades_upload_csv.trade_matcher import TradeMatcher
 
@@ -16,13 +16,15 @@ logger = logging.getLogger(__name__)
 
 
 class TradeProcessingMixin:
-    def _get_handler(self):
-        return BloFinHandler()
+    def _get_handler(self, request):
+        owner = request.user
+        return TradeUpdater(owner)
 
-    def _update_trade_prices(self, owner, page, symbols):
-        handler = self._get_handler()
-        handler.update_trade_prices_by_page(owner, page, symbols=list(symbols))
-        self._save_updated_trades(owner, handler)
+    def _update_trade_prices(self, owner, page, symbols, request):
+        handler_updater = self._get_handler(request)
+        handler_updater.update_trade_prices_by_page(
+            owner, page, symbols=list(symbols))
+        self._save_updated_trades(owner, handler_updater)
 
     def _save_updated_trades(self, owner, handler):
         trades_to_update = TradeUploadBlofin.objects.filter(is_open=True)
@@ -62,7 +64,7 @@ class CsvTradeView(TradeProcessingMixin, generics.ListAPIView):
         symbols_by_page = {
             trade.underlying_asset for trade in paginated_queryset} if paginated_queryset else set()
 
-        self._update_trade_prices(owner, page, symbols_by_page)
+        self._update_trade_prices(owner, page, symbols_by_page, request)
         return self._get_paginated_response(paginated_queryset, queryset, page)
 
     def _validate_page_number(self, page):
@@ -97,10 +99,12 @@ class UploadFileView(generics.CreateAPIView):
             return Response({"error": "Sorry, under construction."}, status=status.HTTP_400_BAD_REQUEST)
 
         reader = pd.read_csv(file)
+
         handler = BloFinHandler()
         matcher = TradeMatcher(owner)
         processor = CsvProcessor(handler)
         trade_aggregator = TradeAggregator(owner=owner)
+        trade_updater = TradeUpdater(owner)
 
         # Convert DataFrame to a list of dictionaries
         csv_data = reader.to_dict('records')
@@ -126,10 +130,10 @@ class UploadFileView(generics.CreateAPIView):
             csv_data, owner, exchange)
 
         matcher.match_trades()
-        handler.update_trade_prices_on_upload(owner)
+        trade_updater.update_trade_prices_on_upload()
         trade_aggregator.update_total_pnl_per_asset()
         trade_aggregator.update_net_pnl()
-        live_price_fetches_count = handler.count_open_trades_for_price_fetch()
+        live_price_fetches_count = trade_updater.count_open_trades_for_price_fetch()
 
         response_message = {
             "status": "success",

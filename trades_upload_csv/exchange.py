@@ -186,10 +186,61 @@ class BloFinHandler:
                 logger.error(
                     f"Error updating trade prices for symbol {symbol}: {e}")
 
+
+class TradeUpdater:
+    def __init__(self, owner):
+        self.owner = owner
+
+    def update_trade_prices_on_upload(self):
+        """Update prices and calculate PnL and percentage for all open trades."""
+        open_trades = TradeUploadBlofin.objects.filter(
+            is_open=True, owner=self.owner).order_by('order_time')
+
+        logger.debug(f"Updating prices for {open_trades.count()} open trades")
+
+        api_request_count = 0
+
+        for trade in open_trades:
+            try:
+                symbol = trade.underlying_asset
+                current_price_data = fetch_quote(symbol)
+                api_request_count += 1
+
+                current_price = Decimal('0.0')
+                if current_price_data:
+                    current_price = Decimal(
+                        current_price_data[0].get('price', '0.0'))
+
+                trade.price = current_price
+
+                avg_fill = trade.avg_fill
+                leverage = trade.leverage
+                long_short = trade.side
+                filled = trade.filled
+
+                try:
+                    pnl_percentage, pnl = calculate_trade_pnl_and_percentage(
+                        current_price, avg_fill, leverage, long_short, filled
+                    )
+                except DivisionByZero:
+                    logger.error(f"Division by zero error for trade: {trade}")
+                    pnl_percentage, pnl = Decimal('0.0'), Decimal('0.0')
+
+                trade.pnl_percentage = pnl_percentage
+                trade.pnl = pnl
+
+                trade.save()
+                # logger.debug(f"Updated trade: {trade.id}, price: {
+                #              current_price}, PnL: {pnl}, PnL %: {pnl_percentage}")
+
+            except Exception as e:
+                logger.error(
+                    f"Error updating trade prices for symbol {symbol}: {e}")
+
     def update_trade_prices_by_page(self, owner, page=1, symbols=[]):
         """Update prices and calculate PnL and percentage for trades on a specific page."""
         open_trades = TradeUploadBlofin.objects.filter(
-            is_open=True, owner=owner).order_by('order_time')
+            is_open=True, owner=self.owner).order_by('order_time')
 
         paginator = Paginator(open_trades, per_page=10)
         try:
