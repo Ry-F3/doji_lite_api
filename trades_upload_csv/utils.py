@@ -4,6 +4,7 @@ import requests
 from django.conf import settings
 import re
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -11,6 +12,10 @@ logger = logging.getLogger(__name__)
 def convert_to_decimal(value):
     """Convert value to Decimal, handle special cases."""
     # Handle specific cases first
+
+    if value is None:
+        return Decimal('0.0')  # Handle NoneType by returning a default value
+
     if value == "Market":
         return Decimal('0.0')  # Use a dummy value or handle as needed
 
@@ -37,6 +42,21 @@ def convert_to_decimal(value):
             return Decimal('0.0')
 
     return Decimal(value)  # Convert directly if already numeric
+
+
+def convert_to_naive_datetime(date_str, date_format='%m/%d/%Y %H:%M:%S'):
+    """
+    Convert a string to a naive datetime object.
+
+    :param date_str: The string representation of the date.
+    :param date_format: The format of the date string (default: '%m/%d/%Y %H:%M:%S').
+    :return: A naive datetime object or None if conversion fails.
+    """
+    try:
+        return datetime.strptime(date_str, date_format)
+    except ValueError:
+        # Log or handle the error if needed
+        return None
 
 
 def convert_to_boolean(value):

@@ -8,8 +8,9 @@ import pandas as pd
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import TradeUploadBlofin
 from .serializers import FileUploadSerializer, SaveTradeSerializer
-from trades_upload_csv.exchange import BloFinHandler
+from trades_upload_csv.exchange import BloFinHandler, CsvProcessor, TradeAggregator
 from trades_upload_csv.utils import process_invalid_data
+from trades_upload_csv.trade_matcher import TradeMatcher
 
 logger = logging.getLogger(__name__)
 
@@ -52,9 +53,9 @@ class CsvTradeView(TradeProcessingMixin, generics.ListAPIView):
         owner = request.user
         logger.debug(f"Processing page: {page}")
 
-        handler = self._get_handler()
-        handler.update_total_pnl_per_asset(owner)
-        handler.update_net_pnl(owner)
+        trade_aggregator = TradeAggregator(owner=owner)
+        trade_aggregator.update_total_pnl_per_asset()
+        trade_aggregator.update_net_pnl()
 
         queryset = self.filter_queryset(self.get_queryset())
         paginated_queryset = self.paginate_queryset(queryset)
@@ -97,13 +98,19 @@ class UploadFileView(generics.CreateAPIView):
 
         reader = pd.read_csv(file)
         handler = BloFinHandler()
+        matcher = TradeMatcher(owner)
+        processor = CsvProcessor(handler)
+        trade_aggregator = TradeAggregator(owner=owner)
 
-        wifusdt_data = reader[reader['Underlying Asset'] == 'WIFUSDT']
-        if not wifusdt_data.empty:
-            print("Filtered WIFUSDT Data:")
-            print(wifusdt_data[['Underlying Asset', 'PNL']])
-        else:
-            print("No data found for WIFUSDT.")
+        # Convert DataFrame to a list of dictionaries
+        csv_data = reader.to_dict('records')
+
+        # wifusdt_data = reader[reader['Underlying Asset'] == 'WIFUSDT']
+        # if not wifusdt_data.empty:
+        #     print("Filtered WIFUSDT Data:")
+        #     print(wifusdt_data[['Underlying Asset', 'PNL']])
+        # else:
+        #     print("No data found for WIFUSDT.")
 
         required_columns = {'Underlying Asset', 'Margin Mode', 'Leverage', 'Order Time', 'Side', 'Avg Fill',
                             'Price', 'Filled', 'Total', 'PNL', 'PNL%', 'Fee', 'Order Options', 'Reduce-only', 'Status'}
@@ -115,12 +122,13 @@ class UploadFileView(generics.CreateAPIView):
         if unexpected_cols:
             return Response({"error": f"Unexpected columns found: {', '.join(unexpected_cols)}"}, status=status.HTTP_400_BAD_REQUEST)
 
-        new_trades_count, duplicates_count, canceled_count = process_invalid_data(
-            reader, handler, owner, exchange)
-        handler.match_trades(owner)
+        new_trades_count, duplicates_count, canceled_count = processor.process_csv_data(
+            csv_data, owner, exchange)
+
+        matcher.match_trades()
         handler.update_trade_prices_on_upload(owner)
-        handler.update_total_pnl_per_asset(owner)
-        handler.update_net_pnl(owner)
+        trade_aggregator.update_total_pnl_per_asset()
+        trade_aggregator.update_net_pnl()
         live_price_fetches_count = handler.count_open_trades_for_price_fetch()
 
         response_message = {

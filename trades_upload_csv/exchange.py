@@ -3,7 +3,7 @@ from datetime import datetime
 from trades_upload_csv.utils import convert_to_boolean, convert_to_decimal
 from trades_upload_csv.calculations import calculate_trade_pnl_and_percentage
 from trades_upload_csv.api_handler import fetch_quote
-from trades_upload_csv.utils import convert_to_decimal
+from trades_upload_csv.utils import convert_to_decimal, convert_to_naive_datetime
 from .models import TradeUploadBlofin
 from django.core.paginator import Paginator, EmptyPage
 from django.utils import timezone
@@ -17,37 +17,56 @@ import pytz
 logger = logging.getLogger(__name__)
 
 
+class CsvProcessor:
+    def __init__(self, handler: 'BloFinHandler'):
+        self.handler = handler
+
+    def process_csv_data(self, csv_data, user, exchange):
+        """Process CSV data, only adding new trades."""
+        new_trades = []
+        duplicates_count = 0
+        canceled_count = 0
+
+        for row in csv_data:
+            trade_status = row.get('Status', None)
+            if trade_status == 'Canceled':
+                canceled_count += 1
+                continue
+
+            trade = self.handler.process_row(row, user, exchange)
+            if trade:
+                new_trades.append(trade)
+            else:
+                if trade is None and row.get('Status', None) != 'Canceled':
+                    duplicates_count += 1
+
+        # Bulk create new trades in the database
+        TradeUploadBlofin.objects.bulk_create(new_trades)
+
+        return len(new_trades), duplicates_count, canceled_count
+
+
 class BloFinHandler:
     def process_row(self, row, owner, exchange):
         try:
             # Extract fields from the row
             trade_status = row.get('Status', None)
             if trade_status == 'Canceled':
-
                 return None
 
             order_time_str = row['Order Time']
-            try:
-                # Convert to naive datetime
-                order_time_naive = datetime.strptime(
-                    order_time_str, '%m/%d/%Y %H:%M:%S')
-                # Convert to aware datetime
+            # Use the utility function to convert the order time string
+            order_time_naive = convert_to_naive_datetime(order_time_str)
+            if order_time_naive:
                 order_time = timezone.make_aware(
                     order_time_naive, timezone.get_current_timezone())
-            except ValueError:
+            else:
                 order_time = None
 
             underlying_asset = row['Underlying Asset']
 
-            # Define a set of assets to exclude
-            excluded_assets = {'BOMEUSDT', 'POPCATUSDT'}
-
-            # Check if the underlying asset is in the excluded list
-            if underlying_asset in excluded_assets:
+            if underlying_asset != 'BTCUSDT':
                 return None
-
-            # if underlying_asset != 'BTCUSDT':
-            #     return None
 
             avg_fill = convert_to_decimal(row['Avg Fill'])
             pnl = convert_to_decimal(row['PNL'])
@@ -114,126 +133,12 @@ class BloFinHandler:
                 exchange=exchange,
                 is_open=is_open,
                 is_matched=is_matched,
-
             )
             return trade_upload_csv
 
         except (InvalidOperation, ValueError) as e:
             logger.error(f"Error processing row: {e}")
             return None
-
-    def process_csv_data(self, csv_data, user, exchange):
-        """Process CSV data, only adding new trades."""
-        new_trades = []
-        duplicates_count = 0
-
-        for row in csv_data:
-            trade = self.process_row(row, user, exchange)
-            if trade:
-                new_trades.append(trade)
-            else:
-                if trade is None and row.get('Status', None) != 'Cancelled':
-                    duplicates_count += 1
-
-        # Bulk create new trades in the database
-        TradeUploadBlofin.objects.bulk_create(new_trades)
-
-        return new_trades, duplicates_count
-
-    def match_trades(self, owner):
-        # Fetch all trades
-        trades = TradeUploadBlofin.objects.filter(owner=owner)
-
-        # Group trades by underlying asset
-        asset_groups = {}
-        for trade in trades:
-            asset = trade.underlying_asset
-            if asset not in asset_groups:
-                asset_groups[asset] = []
-            asset_groups[asset].append(trade)
-
-        # Process each asset group separately
-        for asset, trades in asset_groups.items():
-            # print(f"\nProcessing Asset: {asset}")
-
-            buy_stack = []
-            matches = []
-
-            quantity_buys = 0
-            quantity_sells = 0
-
-            # Update trades for processing
-            for trade in trades:
-                trade.filled *= 10000000  # Convert to integer representation
-
-            # Loop through trades in reversed order
-            for trade in reversed(trades):
-                if trade.side == 'Buy':
-                    quantity_buys += trade.filled
-                    buy_stack.append(trade)
-                    print(f"Buy Trade Added to Stack: ID={
-                        trade.id}, Filled={trade.filled / 10000000:.3f}")
-                elif trade.side == 'Sell':
-                    quantity_sells += trade.filled
-                    sell_trade_id = trade.id
-                    sell_matches = []
-                    print(f"Processing Sell Trade: ID={sell_trade_id}, Filled={
-                        trade.filled / 10000000:.3f}")
-
-                    while trade.filled > 0 and buy_stack:
-                        # Look at the top of the stack
-                        buy_trade = buy_stack[-1]
-                        buy_trade_id = buy_trade.id
-                        print(f"  Trying to Match with Buy Trade: ID={
-                            buy_trade_id}, Filled={buy_trade.filled / 10000000:.3f}")
-
-                        if buy_trade.filled > trade.filled:
-                            matched_quantity = trade.filled
-                            # Partially match the buy trade
-                            buy_trade.filled -= matched_quantity
-                            trade.filled = 0
-                            print(f"  Partially Matched: Buy ID={buy_trade_id}, Sell ID={
-                                sell_trade_id}, Quantity={matched_quantity / 10000000:.3f}")
-                        else:
-                            matched_quantity = buy_trade.filled
-                            # Fully match the buy trade
-                            trade.filled -= matched_quantity
-                            buy_stack.pop()  # Remove the matched buy trade from the stack
-                            print(f"  Fully Matched: Buy ID={buy_trade_id}, Sell ID={
-                                sell_trade_id}, Quantity={matched_quantity / 10000000:.3f}")
-
-                        sell_matches.append((buy_trade_id, matched_quantity))
-
-                    matches.append((sell_trade_id, sell_matches))
-
-            # Update matched trades in the database
-            for sell_id, sell_matches in matches:
-                print(f"Updating Matched Sell Trade: ID={sell_id}")
-                TradeUploadBlofin.objects.filter(id=sell_id).update(
-                    is_matched=True, is_open=False)
-                for buy_id, quantity in sell_matches:
-                    print(f"  Updating Matched Buy Trade: ID={
-                        buy_id}, Quantity={quantity / 10000000:.3f}")
-                    TradeUploadBlofin.objects.filter(id=buy_id).update(
-                        is_matched=True, is_open=False)
-
-            # Handle unmatched trades
-            unmatched_trades = TradeUploadBlofin.objects.filter(
-                owner=owner, underlying_asset=asset, is_matched=False)
-            print(f"Unmatched Trades: {unmatched_trades.count()}")
-            for trade in unmatched_trades:
-                print(f"  Unmatched Trade ID={trade.id}, Filled={
-                    trade.filled / 10000000:.3f}")
-
-            unmatched_trades.update(is_open=True)
-
-            # Summary of the matching process for this asset
-            print(f"Quantity of Buys Processed: {
-                  quantity_buys / 10000000:.3f}")
-            print(f"Quantity of Sells Processed: {
-                  quantity_sells / 10000000:.3f}")
-            print(f"Quantity Remaining: {
-                (quantity_buys - quantity_sells) / 10000000:.3f}")
 
     def update_trade_prices_on_upload(self, owner):
         """Update prices and calculate PnL and percentage for all open trades."""
@@ -355,48 +260,37 @@ class BloFinHandler:
                      open_trades_needing_update}")
         return open_trades_needing_update
 
-    def update_total_pnl_per_asset(self, owner):
-        """Calculate and update total PnL for each asset."""
+
+class TradeAggregator:
+    def __init__(self, owner):
+        self.owner = owner
+
+    def update_total_pnl_per_asset(self):
         assets = TradeUploadBlofin.objects.filter(
-            owner=owner).values('underlying_asset').distinct()
+            owner=self.owner).values('underlying_asset').distinct()
         for asset in assets:
             self.calculate_and_update_total_pnl_for_asset(
-                owner, asset['underlying_asset'])
+                asset['underlying_asset'])
 
-    def calculate_and_update_total_pnl_for_asset(self, owner, asset):
-        """Calculate and update the total PnL for a specific asset."""
+    def calculate_and_update_total_pnl_for_asset(self, asset):
         trades = TradeUploadBlofin.objects.filter(
-            owner=owner, underlying_asset=asset)
-        total_pnl = sum(Decimal(trade.pnl or '0.0') for trade in trades)
+            owner=self.owner, underlying_asset=asset)
+        total_pnl = sum(convert_to_decimal(trade.pnl) for trade in trades)
 
-        # Update the PnL in the database
         for trade in trades:
-            if trade.previous_total_pnl_per_asset != total_pnl:
+            if convert_to_decimal(trade.previous_total_pnl_per_asset) != total_pnl:
                 trade.previous_total_pnl_per_asset = total_pnl
                 trade.save()
 
-        # Return formatted total PnL
-        decimal_places = self.get_decimal_places(total_pnl)
-        return f"{total_pnl:.{decimal_places}f}"
+        return f"{total_pnl:.2f}"
 
-    def update_net_pnl(self, owner):
-        """Calculate and update the net PnL for the owner."""
-        total_pnl = TradeUploadBlofin.objects.filter(owner=owner).aggregate(
-            total_pnl=Sum('pnl')
-        )['total_pnl'] or Decimal('0.0')
+    def update_net_pnl(self):
+        total_pnl = TradeUploadBlofin.objects.filter(owner=self.owner).aggregate(
+            total_pnl=Sum('pnl'))['total_pnl'] or Decimal('0.0')
 
-        # Assume you want to store net PnL in a separate model or update a specific field
-        # If using the same model:
-        # 1. Fetch all trades and update each one (if that's the requirement):
-        for trade in TradeUploadBlofin.objects.filter(owner=owner):
-            if trade.previous_net_pnl != total_pnl:
+        for trade in TradeUploadBlofin.objects.filter(owner=self.owner):
+            if convert_to_decimal(trade.previous_net_pnl) != total_pnl:
                 trade.previous_net_pnl = total_pnl
                 trade.save()
 
-        # Return formatted net PnL
-        decimal_places = self.get_decimal_places(total_pnl)
-        return f"{total_pnl:.{decimal_places}f}"
-
-    def get_decimal_places(self, value):
-        """Helper method to determine the number of decimal places for formatting."""
-        return max(Decimal(value).as_tuple().exponent * -1, 2)
+        return f"{total_pnl:.2f}"
