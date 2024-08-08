@@ -27,9 +27,7 @@ urlpatterns = [
         'dj-rest-auth/registration/', include('dj_rest_auth.registration.urls')
     ),
     path('', include('profiles.urls')),
-    path('', include('trades.urls')),
     path('', include('historical_datasets.urls')),
     path('', include('pnls.urls')),
-    path('', include('trade_csv.urls')),
     path('', include('trades_upload_csv.urls')),
 ]

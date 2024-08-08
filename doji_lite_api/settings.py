@@ -100,10 +100,8 @@ INSTALLED_APPS = [
     'corsheaders',
     # Your apps
     'profiles',
-    'trades',
     'historical_datasets',
     'pnls',
-    'trade_csv',
     'trades_upload_csv'
 ]
 
