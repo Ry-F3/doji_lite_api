@@ -4,10 +4,11 @@ from trades_upload_csv.utils import convert_to_boolean, convert_to_decimal
 from trades_upload_csv.calculations import calculate_trade_pnl_and_percentage
 from trades_upload_csv.api_handler import fetch_quote
 from trades_upload_csv.utils import convert_to_decimal, convert_to_naive_datetime
-from .models import TradeUploadBlofin
+from .models import TradeUploadBlofin, LiveTrades
 from django.core.paginator import Paginator, EmptyPage
 from django.utils import timezone
 from django.db.models import Sum
+from collections import deque, defaultdict
 import requests
 import logging
 import pytz
@@ -65,7 +66,15 @@ class BloFinHandler:
 
             underlying_asset = row['Underlying Asset']
 
-            if underlying_asset != 'BTCUSDT':
+            # # Define a set of assets to exclude
+            # excluded_assets = {'BOMEUSDT',
+            #                    'POPCATUSDT', 'GMEUSDT', 'BRETTUSDT'}
+
+            # # Check if the underlying asset is in the excluded list
+            # if underlying_asset in excluded_assets:
+            #     return None
+
+            if underlying_asset not in ['BTCUSDT']:
                 return None
 
             avg_fill = convert_to_decimal(row['Avg Fill'])
@@ -123,6 +132,7 @@ class BloFinHandler:
                 avg_fill=avg_fill,
                 price=price,
                 filled=filled,
+                original_filled=filled,
                 total=total,
                 pnl=pnl,
                 pnl_percentage=pnl_percentage,
@@ -191,6 +201,80 @@ class TradeUpdater:
                 logger.error(
                     f"Error updating trade prices for symbol {symbol}: {e}")
 
+    def update_trade_prices_by_page(self, owner, page=1, symbols=[]):
+        """Update prices and calculate PnL and percentage for trades on a specific page."""
+        open_trades = TradeUploadBlofin.objects.filter(
+            is_open=True, owner=self.owner).order_by('order_time')
+
+        paginator = Paginator(open_trades, per_page=10)
+        try:
+            paginated_trades = paginator.get_page(page)
+            symbols_by_page = {
+                trade.underlying_asset for trade in paginated_trades}
+            logger.debug(f"Page {page} symbols to process: {symbols_by_page}")
+        except EmptyPage:
+            logger.error(f"Page {page} is empty.")
+            return
+
+        # Fetch live prices for the symbols on the current page
+        current_prices = {}
+        for symbol in symbols_by_page:
+            if symbol not in symbols:
+                continue
+
+            logger.debug(f"Fetching price for symbol: {
+                         symbol} on page: {page}")
+            current_price_data = fetch_quote(symbol)
+
+            if current_price_data:
+                current_price = Decimal(
+                    current_price_data[0].get('price', '0.0'))
+                current_prices[symbol] = current_price
+                logger.debug(f"Updated price for symbol {
+                             symbol}: {current_price}")
+            else:
+                current_prices[symbol] = Decimal('0.0')
+                logger.debug(f"No price data for symbol {symbol}")
+
+        # Update trades with the fetched prices
+        for trade in paginated_trades:
+            if trade.underlying_asset in current_prices:
+                self.update_trade(
+                    trade, current_prices[trade.underlying_asset])
+
+        logger.debug(f"Updated prices for page {page}")
+
+    def update_trade(self, trade, current_price):
+        """Update trade attributes based on the current price and save."""
+        avg_fill = trade.avg_fill
+        leverage = trade.leverage
+        long_short = trade.side
+        filled = trade.filled
+
+        try:
+            pnl_percentage, pnl = calculate_trade_pnl_and_percentage(
+                current_price, avg_fill, leverage, long_short, filled
+            )
+        except DivisionByZero:
+            # logger.error(f"Division by zero error for trade: {trade}")
+            pnl_percentage, pnl = Decimal('0.0'), Decimal('0.0')
+
+        trade.price = current_price
+        trade.pnl_percentage = pnl_percentage
+        trade.pnl = pnl
+        trade.save()
+        # logger.debug(f"Updated trade: {trade.id}, price: {
+        #              current_price}, PnL: {pnl}, PnL %: {pnl_percentage}")
+
+    def count_open_trades_for_price_fetch(self):
+        # Count trades that are open and need price updates
+        open_trades_needing_update = TradeUploadBlofin.objects.filter(
+            is_open=True,
+        ).count()
+        logger.debug(f"Open trades needing update: {
+                     open_trades_needing_update}")
+        return open_trades_needing_update
+
 
 class TradeAggregator:
     def __init__(self, owner):
@@ -205,7 +289,7 @@ class TradeAggregator:
 
     def calculate_and_update_total_pnl_for_asset(self, asset):
         trades = TradeUploadBlofin.objects.filter(
-            owner=self.owner, underlying_asset=asset)
+            owner=self.owner, underlying_asset=asset, is_open=False)
         total_pnl = sum(convert_to_decimal(trade.pnl) for trade in trades)
 
         for trade in trades:
@@ -216,12 +300,105 @@ class TradeAggregator:
         return f"{total_pnl:.2f}"
 
     def update_net_pnl(self):
-        total_pnl = TradeUploadBlofin.objects.filter(owner=self.owner).aggregate(
-            total_pnl=Sum('pnl'))['total_pnl'] or Decimal('0.0')
+        # Initialize stacks for positive and negative P&L for realized and unrealized calculations
+        positive_realized_pnl_stack = deque()
+        negative_realized_pnl_stack = deque()
+        positive_unrealized_pnl_stack = deque()
+        negative_unrealized_pnl_stack = deque()
 
-        for trade in TradeUploadBlofin.objects.filter(owner=self.owner):
-            if convert_to_decimal(trade.previous_net_pnl) != total_pnl:
-                trade.previous_net_pnl = total_pnl
-                trade.save()
+        # Realized P&L for Sell trades that are closed
+        realized_trades = TradeUploadBlofin.objects.filter(
+            owner=self.owner, side='Sell', is_open=False)
+        # Unrealized P&L for Buy trades that are open
+        unrealized_trades = TradeUploadBlofin.objects.filter(
+            owner=self.owner, side='Buy', is_open=True)
 
-        return f"{total_pnl:.2f}"
+        # Process realized trades
+        for trade in realized_trades:
+            pnl = convert_to_decimal(trade.pnl)
+            if pnl != Decimal('0.00'):
+                if pnl >= Decimal('0.001'):
+                    positive_realized_pnl_stack.append(pnl)
+                elif pnl <= Decimal('0.0'):
+                    negative_realized_pnl_stack.append(pnl)
+
+        # Process unrealized trades
+        for trade in unrealized_trades:
+            pnl = convert_to_decimal(trade.pnl)
+            if pnl != Decimal('0.00'):
+                if pnl >= Decimal('0.001'):
+                    positive_unrealized_pnl_stack.append(pnl)
+                elif pnl <= Decimal('0.0'):
+                    negative_unrealized_pnl_stack.append(pnl)
+
+        # Print positive and negative P&L stacks
+        print("Realized Positive P&L values:")
+        for pnl in positive_realized_pnl_stack:
+            print(f"{pnl:.2f}")
+
+        print("\nRealized Negative P&L values:")
+        for pnl in negative_realized_pnl_stack:
+            print(f"{pnl:.2f}")
+
+        print("\nUnrealized Positive P&L values:")
+        for pnl in positive_unrealized_pnl_stack:
+            print(f"{pnl:.2f}")
+
+        print("\nUnrealized Negative P&L values:")
+        for pnl in negative_unrealized_pnl_stack:
+            print(f"{pnl:.2f}")
+
+        # Calculate total positive and negative P&L
+        total_positive_realized_pnl = sum(positive_realized_pnl_stack)
+        total_negative_realized_pnl = sum(negative_realized_pnl_stack)
+        total_positive_unrealized_pnl = sum(positive_unrealized_pnl_stack)
+        total_negative_unrealized_pnl = sum(negative_unrealized_pnl_stack)
+
+        # Calculate final realized and unrealized net P&L
+        calc_realized_net_pnl = total_positive_realized_pnl + total_negative_realized_pnl
+        calc_unrealized_net_pnl = total_positive_unrealized_pnl + \
+            total_negative_unrealized_pnl
+
+        # Print net P&L
+        print(f"\nTotal Realized Positive P&L: {
+              total_positive_realized_pnl:.2f}")
+        print(f"Total Realized Negative P&L: {
+              total_negative_realized_pnl:.2f}")
+        print(f"Realized Net P&L: {calc_realized_net_pnl:.2f}")
+
+        print(f"\nTotal Unrealized Positive P&L: {
+              total_positive_unrealized_pnl:.2f}")
+        print(f"Total Unrealized Negative P&L: {
+              total_negative_unrealized_pnl:.2f}")
+        print(f"Unrealized Net P&L: {calc_unrealized_net_pnl:.2f}")
+
+        # Update `realized_net_pnl` for all relevant closed sell trades
+        realized_trades.update(realized_net_pnl=calc_realized_net_pnl)
+        # Update `unrealized_net_pnl` for all relevant open buy trades
+        unrealized_trades.update(unrealized_net_pnl=calc_unrealized_net_pnl)
+
+        return f"Realized Net P&L: {calc_realized_net_pnl:.2f}, Unrealized Net P&L: {calc_unrealized_net_pnl:.2f}"
+
+
+class LiveTradesUpdater:
+    @staticmethod
+    def update_live_trades():
+        # Fetch all open trades
+        open_trades = TradeUploadBlofin.objects.filter(is_open=True)
+
+        if not open_trades.exists():
+            return
+
+        # Aggregate quantities by asset
+        asset_quantities = defaultdict(Decimal)
+        owner = open_trades.first().owner  # Assuming all open trades have the same owner
+        for trade in open_trades:
+            asset_quantities[trade.underlying_asset] += trade.filled
+
+        # Update or create LiveTrades entries
+        for asset, total_quantity in asset_quantities.items():
+            LiveTrades.objects.update_or_create(
+                owner=owner,
+                asset=asset,
+                defaults={'total_quantity': total_quantity}
+            )

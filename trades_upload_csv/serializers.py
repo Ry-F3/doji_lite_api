@@ -1,8 +1,14 @@
 from rest_framework import serializers
-from .models import TradeUploadBlofin
+from .models import TradeUploadBlofin, LiveTrades
 from collections import defaultdict
 from decimal import Decimal
 from django.contrib.auth.models import User
+
+
+class LiveTradesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LiveTrades
+        fields = ['id', 'owner', 'asset', 'total_quantity']
 
 
 class FileUploadSerializer(serializers.Serializer):
@@ -17,15 +23,15 @@ class SaveTradeSerializer(serializers.ModelSerializer):
     last_price = serializers.SerializerMethodField()
     formatted_pnl = serializers.SerializerMethodField()
     formatted_pnl_percentage = serializers.SerializerMethodField()
-    formatted_net_pnl = serializers.SerializerMethodField()
+    formatted_realized_net_pnl = serializers.SerializerMethodField()
     formatted_total_pnl_per_asset = serializers.SerializerMethodField()
 
     class Meta:
         model = TradeUploadBlofin
         fields = ['id', 'owner', 'underlying_asset', 'margin_mode',
                   'leverage', 'order_time', 'side', 'formatted_avg_fill', 'last_price',
-                  'formatted_filled', 'formatted_pnl', 'formatted_pnl_percentage', 'fee', 'exchange',
-                  'trade_status', 'is_open', 'is_matched', 'formatted_total_pnl_per_asset', 'formatted_net_pnl', 'last_updated']
+                  'formatted_filled', 'original_filled', 'formatted_pnl', 'formatted_pnl_percentage', 'fee', 'exchange',
+                  'trade_status', 'is_open', 'is_matched', 'formatted_total_pnl_per_asset', 'formatted_realized_net_pnl', 'last_updated']
 
     def get_decimal_places(self, price):
         """Determine the number of decimal places needed for the given price."""
@@ -82,25 +88,25 @@ class SaveTradeSerializer(serializers.ModelSerializer):
 
         return formatted_value
 
-    def get_formatted_net_pnl(self, obj):
-        """Format previous_net_pnl with 2 decimal places."""
-        if obj.previous_net_pnl is not None:
+    def get_formatted_realized_net_pnl(self, obj):
+        """Format realized_net_pnl with 2 decimal places."""
+        if obj.realized_net_pnl is not None:
             decimal_places = self.get_decimal_places(
-                obj.previous_net_pnl)
+                obj.realized_net_pnl)
             formatted_value = f"{
-                obj.previous_net_pnl:.{decimal_places}f}"
+                obj.realized_net_pnl:.{decimal_places}f}"
 
             return formatted_value
 
     def get_formatted_total_pnl_per_asset(self, obj):
-        """Format previous_total_pnl_per_asset with 2 decimal places."""
-        if obj.previous_total_pnl_per_asset is not None:
+        """Format previous_total_pnl_per_asset with 2 decimal places if is_open is False."""
+        if obj.is_open is False and obj.previous_total_pnl_per_asset is not None:
             decimal_places = self.get_decimal_places(
                 obj.previous_total_pnl_per_asset)
             formatted_value = f"{
                 obj.previous_total_pnl_per_asset:.{decimal_places}f}"
-
             return formatted_value
+        return None
 
     def get_last_price(self, obj):
         """Format the price with conditional decimal places."""

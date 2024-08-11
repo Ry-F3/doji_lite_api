@@ -22,6 +22,8 @@ class TradeUploadBlofin(models.Model):
         max_digits=20, decimal_places=10)
     filled = models.DecimalField(
         max_digits=20, decimal_places=10)
+    original_filled = models.DecimalField(
+        max_digits=20, decimal_places=10, null=True, blank=True)
     total = models.DecimalField(
         max_digits=20, decimal_places=10)
     pnl = models.DecimalField(
@@ -37,8 +39,11 @@ class TradeUploadBlofin(models.Model):
         max_length=100, choices=EXCHANGE_CHOICES, default='')
     is_open = models.BooleanField(default=None)
     is_matched = models.BooleanField(default=None)
+    is_partially_matched = models.BooleanField(default=False)
     last_updated = models.DateTimeField(auto_now=True)
-    previous_net_pnl = models.DecimalField(
+    realized_net_pnl = models.DecimalField(
+        max_digits=20, decimal_places=10, null=True, blank=True)
+    unrealized_net_pnl = models.DecimalField(
         max_digits=20, decimal_places=10, null=True, blank=True)
     previous_total_pnl_per_asset = models.DecimalField(
         max_digits=20, decimal_places=10, null=True, blank=True)
@@ -48,3 +53,18 @@ class TradeUploadBlofin(models.Model):
 
     def __str__(self):
         return f"{self.underlying_asset} - {self.side}"
+
+
+class LiveTrades(models.Model):
+    owner = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='live_trades')
+    asset = models.CharField(max_length=10)
+    total_quantity = models.DecimalField(max_digits=20, decimal_places=10)
+    last_updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('owner', 'asset')
+        ordering = ['-last_updated']
+
+    def __str__(self):
+        return f"{self.asset} - Quantity: {self.total_quantity}"

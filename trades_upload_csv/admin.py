@@ -1,6 +1,20 @@
 from django.contrib import admin
-from .models import TradeUploadBlofin
+from .models import TradeUploadBlofin, LiveTrades
 from decimal import Decimal
+from django.utils.translation import gettext_lazy as _
+from django.db.models import Min, Max
+
+
+class LiveTradesAdmin(admin.ModelAdmin):
+    list_display = ('owner', 'asset', 'total_quantity', 'last_updated')
+    list_filter = ('owner', 'last_updated')
+    # Assuming `owner` is a ForeignKey to the User model
+    search_fields = ('asset', 'owner__username')
+    ordering = ('-last_updated',)
+    readonly_fields = ('last_updated',)  # Optionally make fields read-only
+
+
+admin.site.register(LiveTrades, LiveTradesAdmin)
 
 
 class TradeUploadCsvAdmin(admin.ModelAdmin):
@@ -14,7 +28,9 @@ class TradeUploadCsvAdmin(admin.ModelAdmin):
         'formatted_avg_fill',
         'formatted_price',
         'formatted_filled',
+        'original_filled',
         'formatted_pnl',
+        'unrealized_net_pnl',
         'formatted_total_pnl_per_asset',
         'formatted_net_pnl',
         'formatted_pnl_percentage',
@@ -22,6 +38,7 @@ class TradeUploadCsvAdmin(admin.ModelAdmin):
         'trade_status',
         'is_open',
         'is_matched',
+        'is_partially_matched',
         'last_updated'
     )
     list_filter = (
@@ -31,7 +48,8 @@ class TradeUploadCsvAdmin(admin.ModelAdmin):
         'trade_status',
         'order_time',
         'is_open',
-        'is_matched'
+        'is_matched',
+        'is_partially_matched'
     )
     search_fields = (
         'underlying_asset',
@@ -40,8 +58,9 @@ class TradeUploadCsvAdmin(admin.ModelAdmin):
         'trade_status',
         'is_open',
         'is_matched'
+
     )
-    ordering = ('-order_time',)  # Order by order_time descending by default
+    ordering = ('-order_time', )  # Order by order_time descending by default
 
     def get_decimal_places(self, price):
         """Determine the number of decimal places needed for the given price."""
@@ -132,12 +151,15 @@ class TradeUploadCsvAdmin(admin.ModelAdmin):
         return 'N/A'
 
     def formatted_net_pnl(self, obj):
-        """Format previous_net_pnl as TOTAL PNL."""
-        if obj.previous_net_pnl is not None:
-            pnl_value = Decimal(obj.previous_net_pnl)
+        """Format realized_net_pnl as TOTAL PNL."""
+        if obj.realized_net_pnl is not None:
+            pnl_value = Decimal(obj.realized_net_pnl)
             decimal_places = self.get_decimal_places(pnl_value)
             return f"{pnl_value:.{decimal_places}f}"
         return 'N/A'
+
+    formatted_pnl.admin_order_field = 'pnl'
+    formatted_pnl_percentage.admin_order_field = 'pnl_percentage'
 
     formatted_avg_fill.short_description = 'Avg Fill'  # Label for the column
     formatted_filled.short_description = 'Filled'
@@ -145,7 +167,7 @@ class TradeUploadCsvAdmin(admin.ModelAdmin):
     formatted_pnl_percentage.short_description = 'PNL %'
     formatted_price.short_description = 'Price'
     formatted_total_pnl_per_asset.short_description = 'PNL ASSET CLASS'
-    formatted_net_pnl.short_description = 'TOTAL PNL'
+    formatted_net_pnl.short_description = 'REALIZED PNL'
 
 
 admin.site.register(TradeUploadBlofin, TradeUploadCsvAdmin)

@@ -6,41 +6,41 @@ from rest_framework import status
 import logging
 import pandas as pd
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import TradeUploadBlofin
-from .serializers import FileUploadSerializer, SaveTradeSerializer
-from trades_upload_csv.exchange import BloFinHandler, CsvProcessor, TradeAggregator, TradeUpdater
+from .models import TradeUploadBlofin, LiveTrades
+from .serializers import FileUploadSerializer, SaveTradeSerializer, LiveTradesSerializer
+from trades_upload_csv.exchange import BloFinHandler, CsvProcessor, TradeAggregator, TradeUpdater, LiveTradesUpdater
 from trades_upload_csv.utils import process_invalid_data
 from trades_upload_csv.trade_matcher import TradeMatcher
 
 logger = logging.getLogger(__name__)
 
 
-class TradeProcessingMixin:
-    def _get_handler(self, request):
-        owner = request.user
-        return TradeUpdater(owner)
+# class TradeProcessingMixin:
+#     def _get_handler(self, request):
+#         owner = request.user
+#         return TradeUpdater(owner)
 
-    def _update_trade_prices(self, owner, page, symbols, request):
-        handler_updater = self._get_handler(request)
-        handler_updater.update_trade_prices_by_page(
-            owner, page, symbols=list(symbols))
-        self._save_updated_trades(owner, handler_updater)
+#     def _update_trade_prices(self, owner, page, symbols, request):
+#         handler_updater = self._get_handler(request)
+#         handler_updater.update_trade_prices_by_page(
+#             owner, page, symbols=list(symbols))
+#         self._save_updated_trades(owner, handler_updater)
 
-    def _save_updated_trades(self, owner, handler):
-        trades_to_update = TradeUploadBlofin.objects.filter(is_open=True)
-        for trade in trades_to_update:
-            try:
-                logger.debug(f"Current trade state before update: {
-                             trade.id} - Price: {trade.price}")
-                handler.update_trade_prices_by_page(owner)
-                trade.save()
-                logger.debug(f"Trade updated and saved: {
-                             trade.id} - New Price: {trade.price}")
-            except Exception as e:
-                logger.error(f"Error saving updated trade {trade.id}: {e}")
+#     def _save_updated_trades(self, owner, handler):
+#         trades_to_update = TradeUploadBlofin.objects.filter(is_open=True)
+#         for trade in trades_to_update:
+#             try:
+#                 logger.debug(f"Current trade state before update: {
+#                              trade.id} - Price: {trade.price}")
+#                 handler.update_trade_prices_by_page(owner)
+#                 trade.save()
+#                 logger.debug(f"Trade updated and saved: {
+#                              trade.id} - New Price: {trade.price}")
+#             except Exception as e:
+#                 logger.error(f"Error saving updated trade {trade.id}: {e}")
 
 
-class CsvTradeView(TradeProcessingMixin, generics.ListAPIView):
+class CsvTradeView(generics.ListAPIView):
     serializer_class = SaveTradeSerializer
     queryset = TradeUploadBlofin.objects.all().order_by('-order_time')
     filter_backends = [DjangoFilterBackend,
@@ -64,7 +64,7 @@ class CsvTradeView(TradeProcessingMixin, generics.ListAPIView):
         symbols_by_page = {
             trade.underlying_asset for trade in paginated_queryset} if paginated_queryset else set()
 
-        self._update_trade_prices(owner, page, symbols_by_page, request)
+        # self._update_trade_prices(owner, page, symbols_by_page, request)
         return self._get_paginated_response(paginated_queryset, queryset, page)
 
     def _validate_page_number(self, page):
@@ -105,6 +105,7 @@ class UploadFileView(generics.CreateAPIView):
         processor = CsvProcessor(handler)
         trade_aggregator = TradeAggregator(owner=owner)
         trade_updater = TradeUpdater(owner)
+        live_trade_updater = LiveTradesUpdater()
 
         # Convert DataFrame to a list of dictionaries
         csv_data = reader.to_dict('records')
@@ -133,6 +134,8 @@ class UploadFileView(generics.CreateAPIView):
         trade_updater.update_trade_prices_on_upload()
         trade_aggregator.update_total_pnl_per_asset()
         trade_aggregator.update_net_pnl()
+        live_trade_updater.update_live_trades()
+
         live_price_fetches_count = trade_updater.count_open_trades_for_price_fetch()
 
         response_message = {
@@ -141,3 +144,8 @@ class UploadFileView(generics.CreateAPIView):
         }
 
         return Response(response_message, status=status.HTTP_201_CREATED)
+
+
+class LiveTradesListView(generics.ListAPIView):
+    queryset = LiveTrades.objects.all()
+    serializer_class = LiveTradesSerializer
