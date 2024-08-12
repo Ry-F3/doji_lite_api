@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
 from django.db import models
 from decimal import Decimal
+import json
 
 
 class TradeUploadBlofin(models.Model):
@@ -61,6 +62,14 @@ class LiveTrades(models.Model):
     asset = models.CharField(max_length=10)
     total_quantity = models.DecimalField(max_digits=20, decimal_places=10)
     last_updated = models.DateTimeField(auto_now=True)
+    trade_ids = models.TextField(default='[]')
+
+    def get_trade_ids(self):
+        # Deserialize JSON string to list
+        return json.loads(self.trade_ids)
+
+    def set_trade_ids(self, trade_ids):
+        self.trade_ids = json.dumps(trade_ids)
 
     class Meta:
         unique_together = ('owner', 'asset')

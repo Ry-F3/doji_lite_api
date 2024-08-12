@@ -20,9 +20,9 @@ def fetch_quote(symbol):
         response.raise_for_status()  # Raises an HTTPError for bad responses
         data = response.json()
         if data:
-            logger.debug(f"Fetched data for symbol {symbol}: {data}")
+            # logger.debug(f"Fetched data for symbol {symbol}: {data}")
             return data
     except requests.RequestException as e:
-        logger.error(f"Request error for symbol {symbol}: {e}")
+        logger.error(f"Request error for symbol")
 
     return []

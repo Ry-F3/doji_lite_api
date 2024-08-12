@@ -1,220 +1,98 @@
-from decimal import Decimal
-from .models import TradeUploadBlofin
+import json
+from django.utils import timezone
+from .models import TradeUploadBlofin, LiveTrades
 
 
-class TradeMatcher:
+class TradeMatcherProcessor:
+    @staticmethod
+    def process_asset_update(asset_name):
+        # Implement processing logic here
+        print(f"Processing asset update for: {asset_name}")
+
+
+class TradeIdMatcher:
     def __init__(self, owner):
         self.owner = owner
+        print("TradeIdMatcher initialized.")
 
-    def match_trades(self):
-        # Fetch all trades for the owner
+    def check_trade_ids(self):
+        print("Checking ids")
+
+        # Fetch trades for the given owner
         trades = TradeUploadBlofin.objects.filter(owner=self.owner)
+        print(f"Fetched {trades.count()} trades for owner {self.owner}")
 
-        # Group trades by underlying asset
-        asset_groups = self.group_trades_by_asset(trades)
+        # Dictionary to hold asset IDs and associated trades
+        asset_ids = {}
 
-        # Process each asset group separately
-        for asset, trades in asset_groups.items():
-            self.process_asset_trades(asset, trades)
-
-    def group_trades_by_asset(self, trades):
-        """Group trades by underlying asset."""
-        asset_groups = {}
+        # Iterate through trades and group by underlying asset
         for trade in trades:
             asset = trade.underlying_asset
-            if asset not in asset_groups:
-                asset_groups[asset] = []
-            asset_groups[asset].append(trade)
-        return asset_groups
+            if asset:
+                if asset not in asset_ids:
+                    asset_ids[asset] = []
+                asset_ids[asset].append(trade.id)
 
-    def process_asset_trades(self, asset, trades):
-        """Process trades for a specific asset."""
-        buy_stack = []
-        matches = []
-        last_matched_trade = None
-        last_matched_quantity = 0
+        print("Assets and their trade IDs:")
+        for asset, ids in asset_ids.items():
+            print(f"Asset: {asset}, Trade IDs: {ids}")
 
-        quantity_buys = 0
-        quantity_sells = 0
-        remainder = 0
+        # Check these IDs in the LiveTrades model
+        for asset, ids in asset_ids.items():
+            # Fetch or create LiveTrades entry for the given owner and asset
+            try:
+                live_trade = LiveTrades.objects.get(
+                    owner=self.owner, asset=asset)
+                print(f"Found LiveTrades for asset: {asset}")
 
-        # Update trades for processing
-        for trade in trades:
-            trade.filled *= 10000000  # Convert to integer representation
+                # Parse existing trade_ids field from JSON string to a Python list
+                existing_trade_ids = json.loads(live_trade.trade_ids)
+                print(f"Existing trade IDs for asset {
+                      asset}: {existing_trade_ids}")
 
-        # Loop through trades in reversed order
-        for trade in reversed(trades):
-            if trade.side == 'Buy':
-                quantity_buys += trade.filled
-                buy_stack.append(trade)
-                print(f"Buy Trade Added to Stack: ID={
-                      trade.id}, Filled={trade.filled / 10000000:.3f}")
-            elif trade.side == 'Sell':
-                quantity_sells += trade.filled
-                sell_trade_id = trade.id
-                sell_matches = []
-                print(f"Processing Sell Trade: ID={sell_trade_id}, Filled={
-                      trade.filled / 10000000:.3f}")
+                # Determine new IDs to be added
+                new_ids = set(ids) - set(existing_trade_ids)
+                print(f"New trade IDs to add for asset {asset}: {new_ids}")
 
-                while trade.filled > 0 and buy_stack:
-                    # Look at the top of the stack
-                    buy_trade = buy_stack[-1]
-                    buy_trade_id = buy_trade.id
-                    print(f"  Trying to Match with Buy Trade: ID={
-                          buy_trade_id}, Filled={buy_trade.filled / 10000000:.3f}")
+                # Update if there are new IDs
+                if new_ids:
+                    self.put(asset, list(new_ids), live_trade)
 
-                    if buy_trade.filled > trade.filled:
-                        matched_quantity = trade.filled
-                        # Partially match the buy trade
-                        buy_trade.filled -= matched_quantity
-                        trade.filled = 0
-                        print(f"  Partially Matched: Buy ID={buy_trade_id}, Sell ID={
-                              sell_trade_id}, Quantity={matched_quantity / 10000000:.3f}")
-                        last_matched_trade = buy_trade
-                        last_matched_quantity = matched_quantity
-                        # buy_stack[-1] = buy_trade
-                        # Mark the trade as partially matched
-                        TradeUploadBlofin.objects.filter(id=buy_trade_id).update(
-                            is_partially_matched=True
-                        )
-                    else:
-                        matched_quantity = buy_trade.filled
-                        # Fully match the buy trade
-                        trade.filled -= matched_quantity
-                        last_matched_trade = buy_trade
-                        last_matched_quantity = matched_quantity
-                        buy_stack.pop()  # Remove the matched buy trade from the stack
-                        print(f"  Fully Matched: Buy ID={buy_trade_id}, Sell ID={
-                              sell_trade_id}, Quantity={matched_quantity / 10000000:.3f}")
-                        # Ensure the trade is marked as fully matched
-                        TradeUploadBlofin.objects.filter(id=buy_trade_id).update(
-                            is_partially_matched=False
-                        )
+            except LiveTrades.DoesNotExist:
+                # If no LiveTrades entry exists for this asset, create a new one
+                print(f"No existing LiveTrades entry for asset {
+                      asset}. Creating new entry.")
+                self.put(asset, ids)
 
-                    sell_matches.append((buy_trade_id, matched_quantity))
+        return asset_ids
 
-                matches.append((sell_trade_id, sell_matches))
+    def put(self, asset_name, new_trade_ids, live_trade=None):
+        # Fetch or create LiveTrades entry for the asset
+        if live_trade:
+            # Parse current trade_ids and update with new trade IDs
+            current_trade_ids = json.loads(live_trade.trade_ids)
+            updated_trade_ids = list(set(current_trade_ids) | set(
+                new_trade_ids))  # Union of current and new IDs
 
-        # Update matched trades in the database
-        self.update_matched_trades(matches)
-
-        # Handle unmatched trades
-        self.handle_unmatched_trades(asset)
-
-        # Summary of the matching process for this asset
-        self.summarize_matching_process(
-            asset, quantity_buys, quantity_sells)
-
-        # Check for remaining buy trades in the stack
-        self.check_remaining_buy_stack(
-            buy_stack, quantity_buys, quantity_sells, last_matched_trade)
-
-    def update_matched_trades(self, matches):
-        """Update matched trades in the database."""
-        for sell_id, sell_matches in matches:
-            print(f"Updating Matched Sell Trade: ID={sell_id}")
-            TradeUploadBlofin.objects.filter(id=sell_id).update(
-                is_matched=True, is_open=False)
-            for buy_id, quantity in sell_matches:
-                print(f"  Updating Matched Buy Trade: ID={
-                      buy_id}, Quantity={quantity / 10000000:.3f}")
-                TradeUploadBlofin.objects.filter(id=buy_id).update(
-                    is_matched=True, is_open=False)
-
-    def handle_unmatched_trades(self, asset):
-        """Handle unmatched trades."""
-        unmatched_trades = TradeUploadBlofin.objects.filter(
-            owner=self.owner, underlying_asset=asset, is_matched=False)
-        print(f"Unmatched Trades: {unmatched_trades.count()}")
-        for trade in unmatched_trades:
-            print(f"  Unmatched Trade ID={trade.id}, Filled={
-                  trade.avg_fill}")
-
-        unmatched_trades.update(is_open=True)
-
-    def summarize_matching_process(self, asset, quantity_buys, quantity_sells):
-        """Summarize the matching process."""
-        print(f"Processing Asset: {asset}")
-        print(f"Quantity of Buys Processed: {quantity_buys / 10000000:.3f}")
-        print(f"Quantity of Sells Processed: {quantity_sells / 10000000:.3f}")
-        print(f"Quantity Remaining: {
-              (quantity_buys - quantity_sells) / 10000000:.3f}")
-
-    def check_remaining_buy_stack(self, buy_stack, quantity_buys, quantity_sells, last_matched_trade):
-        """Check and print remaining quantities for buy trades still in the stack."""
-        total_remaining_filled = sum(trade.filled for trade in buy_stack)
-        processed_quantity = quantity_buys - quantity_sells
-
-        print("Remaining Buy Trades in Stack:")
-        for trade in buy_stack:
-            print(f"  Buy Trade ID={trade.id}, Remaining Filled={
-                trade.filled / 10000000:.3f}")
-
-        # Print total remaining filled and compare it with the processed quantity
-        print(f"Total Remaining Filled in Buy Stack: {
-            total_remaining_filled / 10000000:.3f}")
-        print(f"Difference Between Total Remaining Filled and Processed Quantity: {
-            (total_remaining_filled - processed_quantity) / 10000000:.3f}")
-
-        # Check if there are new trades for the same underlying asset
-        new_trades_exist = TradeUploadBlofin.objects.filter(
-            owner=self.owner,
-            underlying_asset=last_matched_trade.underlying_asset,
-            is_open=True,
-            is_matched=False
-        ).exists()
-
-        if not new_trades_exist:
-            print(f"No new trades for underlying asset {
-                last_matched_trade.underlying_asset}. Skipping updates.")
-            return
-
-        # Handle partial matches by updating the last matched trade if needed
-        remaining_filled_difference = 0
-        if last_matched_trade and last_matched_trade.filled > 0:
-            remaining_filled_difference = last_matched_trade.original_filled - \
-                last_matched_trade.filled / 10000000
-            print(f"Updating Last Matched Trade ID={
-                last_matched_trade.id} with Remaining Filled={remaining_filled_difference:.3f}")
-            # Update the last matched trade in the database to reflect the remaining quantity
-            TradeUploadBlofin.objects.filter(id=last_matched_trade.id).update(
-                filled=last_matched_trade.filled / 10000000,
-                is_open=True,
-                is_matched=False,
-                is_partially_matched=True  # Mark as partially matched
-            )
-
-            # Add the remaining difference to an open trade that is marked as partially matched within the same asset
-            matched = False
-            for trade in TradeUploadBlofin.objects.filter(
-                    owner=self.owner,
-                    underlying_asset=last_matched_trade.underlying_asset,
-                    is_open=False,
-                    is_matched=True,
-                    is_partially_matched=False):
-
-                # Calculate the difference for the trade
-                difference = trade.original_filled - trade.filled / 10000000
-
-                if difference > 0:
-                    # Add the previously calculated remaining difference from last_matched_trade
-                    total_difference = difference + remaining_filled_difference
-
-                    print(f"Updating Trade ID={trade.id} with Total Difference={
-                        total_difference:.3f}")
-
-                    # Update the trade in the database
-                    TradeUploadBlofin.objects.filter(id=trade.id).update(
-                        filled=trade.filled / 10000000 + total_difference,  # Apply the difference
-                        is_open=False,
-                        is_matched=True,
-                        is_partially_matched=True  # Reset to not partially matched
-                    )
-                    matched = True
-                    break  # Assuming we update only one trade, remove if you want to update multiple trades
-
-            if not matched:
-                print("No suitable trade found to add the remaining difference.")
+            # Update the LiveTrades entry
+            live_trade.trade_ids = json.dumps(updated_trade_ids)
+            live_trade.last_updated = timezone.now()  # Update the timestamp
+            live_trade.save()
+            print(f"Updated LiveTrades for asset {
+                  asset_name} with new trade IDs.")
 
         else:
-            print("No last matched trade found or last matched trade is fully matched.")
+            # Create a new LiveTrades entry
+            live_trade = LiveTrades(
+                owner=self.owner,
+                asset=asset_name,
+                total_quantity=0,  # Set to 0 or any default value
+                trade_ids=json.dumps(new_trade_ids),
+                last_updated=timezone.now()
+            )
+            live_trade.save()
+            print(f"Created new LiveTrades entry for asset {
+                  asset_name} with trade IDs: {new_trade_ids}")
+
+        # Pass the asset name to TradeMatcherProcessor
+        TradeMatcherProcessor.process_asset_update(asset_name)

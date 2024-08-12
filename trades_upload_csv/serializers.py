@@ -8,7 +8,7 @@ from django.contrib.auth.models import User
 class LiveTradesSerializer(serializers.ModelSerializer):
     class Meta:
         model = LiveTrades
-        fields = ['id', 'owner', 'asset', 'total_quantity']
+        fields = ['id', 'owner', 'asset', 'total_quantity', 'trade_ids']
 
 
 class FileUploadSerializer(serializers.Serializer):

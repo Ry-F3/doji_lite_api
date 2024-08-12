@@ -74,7 +74,7 @@ class BloFinHandler:
             # if underlying_asset in excluded_assets:
             #     return None
 
-            if underlying_asset not in ['BTCUSDT']:
+            if underlying_asset not in ['BTCUSDT', 'ETHUSDT']:
                 return None
 
             avg_fill = convert_to_decimal(row['Avg Fill'])
@@ -332,21 +332,21 @@ class TradeAggregator:
                     negative_unrealized_pnl_stack.append(pnl)
 
         # Print positive and negative P&L stacks
-        print("Realized Positive P&L values:")
-        for pnl in positive_realized_pnl_stack:
-            print(f"{pnl:.2f}")
+        # print("Realized Positive P&L values:")
+        # for pnl in positive_realized_pnl_stack:
+        #     print(f"{pnl:.2f}")
 
-        print("\nRealized Negative P&L values:")
-        for pnl in negative_realized_pnl_stack:
-            print(f"{pnl:.2f}")
+        # print("\nRealized Negative P&L values:")
+        # for pnl in negative_realized_pnl_stack:
+        #     print(f"{pnl:.2f}")
 
-        print("\nUnrealized Positive P&L values:")
-        for pnl in positive_unrealized_pnl_stack:
-            print(f"{pnl:.2f}")
+        # print("\nUnrealized Positive P&L values:")
+        # for pnl in positive_unrealized_pnl_stack:
+        #     print(f"{pnl:.2f}")
 
-        print("\nUnrealized Negative P&L values:")
-        for pnl in negative_unrealized_pnl_stack:
-            print(f"{pnl:.2f}")
+        # print("\nUnrealized Negative P&L values:")
+        # for pnl in negative_unrealized_pnl_stack:
+        #     print(f"{pnl:.2f}")
 
         # Calculate total positive and negative P&L
         total_positive_realized_pnl = sum(positive_realized_pnl_stack)
@@ -360,17 +360,17 @@ class TradeAggregator:
             total_negative_unrealized_pnl
 
         # Print net P&L
-        print(f"\nTotal Realized Positive P&L: {
-              total_positive_realized_pnl:.2f}")
-        print(f"Total Realized Negative P&L: {
-              total_negative_realized_pnl:.2f}")
-        print(f"Realized Net P&L: {calc_realized_net_pnl:.2f}")
+        # print(f"\nTotal Realized Positive P&L: {
+        #       total_positive_realized_pnl:.2f}")
+        # print(f"Total Realized Negative P&L: {
+        #       total_negative_realized_pnl:.2f}")
+        # print(f"Realized Net P&L: {calc_realized_net_pnl:.2f}")
 
-        print(f"\nTotal Unrealized Positive P&L: {
-              total_positive_unrealized_pnl:.2f}")
-        print(f"Total Unrealized Negative P&L: {
-              total_negative_unrealized_pnl:.2f}")
-        print(f"Unrealized Net P&L: {calc_unrealized_net_pnl:.2f}")
+        # print(f"\nTotal Unrealized Positive P&L: {
+        #       total_positive_unrealized_pnl:.2f}")
+        # print(f"Total Unrealized Negative P&L: {
+        #       total_negative_unrealized_pnl:.2f}")
+        # print(f"Unrealized Net P&L: {calc_unrealized_net_pnl:.2f}")
 
         # Update `realized_net_pnl` for all relevant closed sell trades
         realized_trades.update(realized_net_pnl=calc_realized_net_pnl)

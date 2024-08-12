@@ -10,7 +10,7 @@ from .models import TradeUploadBlofin, LiveTrades
 from .serializers import FileUploadSerializer, SaveTradeSerializer, LiveTradesSerializer
 from trades_upload_csv.exchange import BloFinHandler, CsvProcessor, TradeAggregator, TradeUpdater, LiveTradesUpdater
 from trades_upload_csv.utils import process_invalid_data
-from trades_upload_csv.trade_matcher import TradeMatcher
+from trades_upload_csv.trade_matcher import TradeIdMatcher
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +101,8 @@ class UploadFileView(generics.CreateAPIView):
         reader = pd.read_csv(file)
 
         handler = BloFinHandler()
-        matcher = TradeMatcher(owner)
+        matcher_id = TradeIdMatcher(owner)
+        # matcher = TradeMatcher(owner)
         processor = CsvProcessor(handler)
         trade_aggregator = TradeAggregator(owner=owner)
         trade_updater = TradeUpdater(owner)
@@ -130,7 +131,14 @@ class UploadFileView(generics.CreateAPIView):
         new_trades_count, duplicates_count, canceled_count = processor.process_csv_data(
             csv_data, owner, exchange)
 
-        matcher.match_trades()
+        # if new_trades_count > 0:
+        #     matcher.match_trades()
+        # else:
+        #     print("No new trades added. Skipping matching process.")
+
+        # matcher.match_trades()
+        matcher_id.check_trade_ids()
+
         trade_updater.update_trade_prices_on_upload()
         trade_aggregator.update_total_pnl_per_asset()
         trade_aggregator.update_net_pnl()
