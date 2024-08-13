@@ -70,15 +70,15 @@ class TradeMatcher:
         trade_ids = []
 
         # Retrieve initial quantities and trades from the LiveTrades model
-        live_trade_entry, created = LiveTrades.objects.get_or_create(
-            asset=asset,
-            defaults={'owner': self.owner,
-                      'total_quantity': 0, 'trade_ids': trade_ids}
-        )
+        # live_trade_entry, created = LiveTrades.objects.get_or_create(
+        #     asset=asset,
+        #     defaults={'owner': self.owner,
+        #               'total_quantity': 0, 'trade_ids': trade_ids}
+        # )
 
         # Track initial quantities and existing trade IDs
-        initial_quantity_buys = live_trade_entry.total_quantity
-        initial_trade_ids = set(live_trade_entry.trade_ids)
+        # initial_quantity_buys = live_trade_entry.total_quantity
+        # initial_trade_ids = set(live_trade_entry.trade_ids)
 
         # Update trades for processing
         for trade in trades:
