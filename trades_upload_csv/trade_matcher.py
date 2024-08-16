@@ -1,7 +1,8 @@
 import json
 from django.utils import timezone
-from django.db.models import F
+from django.db.models import F, Sum, Case, When, IntegerField
 from .models import TradeUploadBlofin, LiveTrades
+from trades_upload_csv.api.api_handler import fetch_quote
 
 
 class TradeMatcherProcessor:
@@ -121,6 +122,21 @@ class TradeMatcherProcessor:
             print(f"Before processing: Total Quantity Buys={
                 quantity_buys}, Sells={quantity_sells}")
 
+        if quantity_buys == quantity_sells:
+            print("Do nothing: quantity_buys equals quantity_sells")
+            equal_trades = TradeUploadBlofin.objects.filter(
+                owner=self.owner,
+                underlying_asset=asset_name,
+
+            ).update(
+                is_open=False,
+                is_matched=True,
+                is_partially_matched=False,
+                filled=F("original_filled")
+
+            )
+        else:
+            # Continue with processing if quantities are not equal
             self.update_matched_trades(matches)
             self.update_unmatched_trades(asset_name)
             self.check_remaining_buy_stack(
@@ -129,11 +145,12 @@ class TradeMatcherProcessor:
     def update_matched_trades(self, matches):
         """Update matched trades in the database."""
         for sell_id, sell_matches in matches:
-            # print(f"Updating Matched Sell Trade: ID={sell_id}")
+            print(f"Updating Matched Sell Trade: ID={sell_id}")
             TradeUploadBlofin.objects.filter(id=sell_id).update(
                 is_matched=True, is_open=False)
             for buy_id, quantity in sell_matches:
-                # print(f"  Updating Matched Buy Trade: ID={buy_id}, Quantity={quantity / 10000000:.3f}")
+                print(f"  Updating Matched Buy Trade: ID={
+                      buy_id}, Quantity={quantity / 10000000:.3f}")
                 TradeUploadBlofin.objects.filter(id=buy_id).update(
                     is_matched=True, is_open=False)
 
@@ -154,6 +171,56 @@ class TradeMatcherProcessor:
 
         # Call methods to handle partial trades and update quantities
         self.update_partial_trades(last_matched_trade)
+
+        # Check if long or short trades - (note full long and short logic has not been implimented)
+        if last_matched_trade:
+            asset = last_matched_trade.underlying_asset
+            side = last_matched_trade.side
+
+            # Filter TradeUploadBlofin by asset and where is_open=True
+            open_trades = TradeUploadBlofin.objects.filter(
+                underlying_asset=asset,
+                side=side,
+                is_open=True
+            )
+
+            # Initialize counters for buys and sells
+            total_buy = 0
+            total_sell = 0
+
+            # Count the number of BUY and SELL trades
+            for trade in open_trades:
+                if trade.side == 'Buy':
+                    total_buy += 1
+                elif trade.side == 'Sell':
+                    total_sell += 1
+
+             # Debugging output to see the counts
+            print(f"Asset: {asset}")
+            print(f"Total BUY trades: {total_buy}")
+            print(f"Total SELL trades: {total_sell}")
+
+            # Compare the totals to determine if the position is LONG or SHORT
+            if total_buy > total_sell:
+                long_short = 'LONG'
+            elif total_sell > total_buy:
+                long_short = 'SHORT'
+            else:
+                long_short = 'NEUTRAL'  # Use NEUTRAL if buys equal sells
+
+                # Update or create the LiveTrades entry
+            live_trade, created = LiveTrades.objects.get_or_create(
+                owner=self.owner,
+                asset=asset,
+                defaults={'long_short': long_short}
+            )
+
+            if not created:
+                live_trade.long_short = long_short
+                live_trade.save()
+
+            print(f"Updated LiveTrades for asset {
+                asset}: Long/Short = {long_short}")
 
     def update_partial_trades(self, last_matched_trade):
         """Handle updates to the last matched trade."""
@@ -309,6 +376,9 @@ class TradeIdMatcher:
 
     def put(self, asset_name, new_trade_ids, live_trade=None):
         # Fetch or create LiveTrades entry for the asset
+        quote_data = fetch_quote(asset_name)
+        live_price = quote_data[0]['price'] if quote_data else 0
+
         if live_trade:
             # Parse current trade_ids and update with new trade IDs
             current_trade_ids = json.loads(live_trade.trade_ids)
@@ -317,6 +387,7 @@ class TradeIdMatcher:
 
             # Update the LiveTrades entry
             live_trade.trade_ids = json.dumps(updated_trade_ids)
+            live_trade.live_price = live_price
             live_trade.last_updated = timezone.now()  # Update the timestamp
             live_trade.save()
             print("             ")
@@ -330,8 +401,11 @@ class TradeIdMatcher:
                 owner=self.owner,
                 asset=asset_name,
                 total_quantity=0,  # Set to 0 or any default value
+                long_short="LONG",
+                live_price=live_price,
                 trade_ids=json.dumps(new_trade_ids),
-                last_updated=timezone.now()
+                last_updated=timezone.now(),
+
             )
             live_trade.save()
             print("             ")

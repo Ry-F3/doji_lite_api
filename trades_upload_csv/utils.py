@@ -32,7 +32,7 @@ def convert_to_decimal(value):
             sign = 1
 
         # Remove any non-numeric characters (except decimal point)
-        numeric_value = re.sub(r'[^\d.-]', '', value)
+        numeric_value = re.sub(r'[^\d\.\-]', '', value)
 
         try:
             decimal_value = Decimal(numeric_value)
@@ -41,7 +41,11 @@ def convert_to_decimal(value):
             # Handle conversion errors by returning a default value
             return Decimal('0.0')
 
-    return Decimal(value)  # Convert directly if already numeric
+    # Convert directly if already numeric (make sure it is a valid Decimal format)
+    try:
+        return Decimal(value)
+    except (ValueError, InvalidOperation):
+        return Decimal('0.0')
 
 
 def convert_to_naive_datetime(date_str, date_format='%m/%d/%Y %H:%M:%S'):

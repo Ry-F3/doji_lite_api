@@ -1,13 +1,13 @@
 from decimal import Decimal, DivisionByZero,  InvalidOperation
 from datetime import datetime
 from trades_upload_csv.utils import convert_to_boolean, convert_to_decimal
-from trades_upload_csv.calculations import calculate_trade_pnl_and_percentage
-from trades_upload_csv.api_handler import fetch_quote
+from trades_upload_csv.long_short.calculations import calculate_trade_pnl_and_percentage
+from trades_upload_csv.api.api_handler import fetch_quote
 from trades_upload_csv.utils import convert_to_decimal, convert_to_naive_datetime
-from .models import TradeUploadBlofin, LiveTrades
+from trades_upload_csv.models import TradeUploadBlofin, LiveTrades
 from django.core.paginator import Paginator, EmptyPage
 from django.utils import timezone
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from collections import deque, defaultdict
 import requests
 import logging
@@ -36,15 +36,35 @@ class CsvProcessor:
 
             trade = self.handler.process_row(row, user, exchange)
             if trade:
-                new_trades.append(trade)
-            else:
-                if trade is None and row.get('Status', None) != 'Canceled':
+                if self.is_duplicate(trade):
                     duplicates_count += 1
+                else:
+                    new_trades.append(trade)
 
         # Bulk create new trades in the database
         TradeUploadBlofin.objects.bulk_create(new_trades)
 
         return len(new_trades), duplicates_count, canceled_count
+
+    def is_duplicate(self, trade):
+        """Check if a trade is a duplicate within tolerance."""
+        TOLERANCE = Decimal('0.0001')
+
+        duplicate_queryset = TradeUploadBlofin.objects.filter(
+            order_time=trade.order_time,
+            underlying_asset=trade.underlying_asset,
+            fee=trade.fee
+        ).filter(
+            Q(avg_fill__lte=trade.avg_fill + TOLERANCE) &
+            Q(avg_fill__gte=trade.avg_fill - TOLERANCE)
+        )
+
+        if duplicate_queryset.exists():
+            # Log the duplicate trades for debugging
+            for duplicate in duplicate_queryset:
+                logger.info(f"Duplicate found: {duplicate}")
+
+        return duplicate_queryset.exists()
 
 
 class BloFinHandler:
@@ -74,7 +94,7 @@ class BloFinHandler:
             # if underlying_asset in excluded_assets:
             #     return None
 
-            if underlying_asset not in ['BTCUSDT', 'ETHUSDT', 'RUNEUSDT']:
+            if underlying_asset not in ['ETHUSDT', 'ARBUSDT', 'BTCUSDT', 'SEIUSDT']:
                 return None
 
             avg_fill = convert_to_decimal(row['Avg Fill'])
@@ -114,12 +134,29 @@ class BloFinHandler:
             else:
                 price = price
 
-            # Check if a trade with the same attributes already exists
-            if TradeUploadBlofin.objects.filter(
+            # Define the tolerance level
+            TOLERANCE = Decimal('0.0001')
+
+            # Create a query to find duplicates within the tolerance range
+            duplicate_queryset = TradeUploadBlofin.objects.filter(
                 order_time=order_time,
-                underlying_asset=row['Underlying Asset'],
-                avg_fill=avg_fill
-            ).exists():
+                underlying_asset=underlying_asset,
+                fee=fee
+            ).filter(
+                Q(avg_fill__lte=avg_fill +
+                  TOLERANCE) & Q(avg_fill__gte=avg_fill - TOLERANCE)
+            )
+
+            if duplicate_queryset.exists():  # Check if there are any duplicates
+                duplicate_count = duplicate_queryset.count()  # Count the duplicates
+
+                if duplicate_count > 1:
+                    # Get all but the first duplicate
+                    excess_duplicates = duplicate_queryset[1:]
+                    excess_duplicates.delete()  # Delete the excess duplicates
+                    logger.warning(f"Duplicate record found: {order_time}, {
+                                   underlying_asset}, {avg_fill}, {fee}")
+
                 return None
 
             trade_upload_csv = TradeUploadBlofin(

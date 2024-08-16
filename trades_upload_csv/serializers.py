@@ -9,7 +9,7 @@ class LiveTradesSerializer(serializers.ModelSerializer):
     class Meta:
         model = LiveTrades
         fields = ['id', 'owner', 'asset',
-                  'total_quantity', 'trade_ids', 'last_updated']
+                  'total_quantity', 'long_short', 'live_price', 'live_fill', 'live_pnl', 'live_percentage', 'trade_ids', 'last_updated', 'is_live']
 
 
 class FileUploadSerializer(serializers.Serializer):
@@ -19,7 +19,7 @@ class FileUploadSerializer(serializers.Serializer):
 
 
 class SaveTradeSerializer(serializers.ModelSerializer):
-    formatted_avg_fill = serializers.SerializerMethodField()
+    # formatted_avg_fill = serializers.SerializerMethodField()
     formatted_filled = serializers.SerializerMethodField()
     last_price = serializers.SerializerMethodField()
     formatted_pnl = serializers.SerializerMethodField()
@@ -30,7 +30,7 @@ class SaveTradeSerializer(serializers.ModelSerializer):
     class Meta:
         model = TradeUploadBlofin
         fields = ['id', 'owner', 'underlying_asset', 'margin_mode',
-                  'leverage', 'order_time', 'side', 'formatted_avg_fill', 'last_price',
+                  'leverage', 'order_time', 'side', 'avg_fill', 'last_price',
                   'formatted_filled', 'original_filled', 'formatted_pnl', 'formatted_pnl_percentage', 'fee', 'exchange',
                   'trade_status', 'is_open', 'is_matched', 'formatted_total_pnl_per_asset', 'formatted_realized_net_pnl', 'last_updated']
 
@@ -49,15 +49,15 @@ class SaveTradeSerializer(serializers.ModelSerializer):
         else:
             return 2
 
-    def get_formatted_avg_fill(self, obj):
-        """Format avg_fill with conditional decimal places."""
-        if obj.avg_fill is not None:
-            avg_fill_value = Decimal(obj.avg_fill)
-            decimal_places = self.get_decimal_places(avg_fill_value)
-            formatted_value = f"{avg_fill_value:.{decimal_places}f}"
+    # def get_formatted_avg_fill(self, obj):
+    #     """Format avg_fill with conditional decimal places."""
+    #     if obj.avg_fill is not None:
+    #         avg_fill_value = Decimal(obj.avg_fill)
+    #         decimal_places = self.get_decimal_places(avg_fill_value)
+    #         formatted_value = f"{avg_fill_value:.{decimal_places}f}"
 
-            return formatted_value
-        return 'N/A'
+    #         return formatted_value
+    #     return 'N/A'
 
     def get_formatted_filled(self, obj):
         """Format filled with conditional decimal places."""

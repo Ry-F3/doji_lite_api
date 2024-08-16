@@ -8,7 +8,7 @@ import pandas as pd
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import TradeUploadBlofin, LiveTrades
 from .serializers import FileUploadSerializer, SaveTradeSerializer, LiveTradesSerializer
-from trades_upload_csv.exchange import BloFinHandler, CsvProcessor, TradeAggregator, TradeUpdater, LiveTradesUpdater
+from trades_upload_csv.exchanges.blofin.trade_upload import BloFinHandler, CsvProcessor, TradeAggregator, TradeUpdater, LiveTradesUpdater
 from trades_upload_csv.utils import process_invalid_data
 from trades_upload_csv.trade_matcher import TradeIdMatcher
 
@@ -131,24 +131,22 @@ class UploadFileView(generics.CreateAPIView):
         new_trades_count, duplicates_count, canceled_count = processor.process_csv_data(
             csv_data, owner, exchange)
 
-        # if new_trades_count > 0:
-        #     matcher.match_trades()
-        # else:
-        #     print("No new trades added. Skipping matching process.")
-
         # matcher.match_trades()
-        matcher_id.check_trade_ids()
-
-        trade_updater.update_trade_prices_on_upload()
-        trade_aggregator.update_total_pnl_per_asset()
-        trade_aggregator.update_net_pnl()
-        live_trade_updater.update_live_trades()
-
         live_price_fetches_count = trade_updater.count_open_trades_for_price_fetch()
+
+        if new_trades_count > 0:
+            matcher_id.check_trade_ids()
+
+            live_trade_updater.update_live_trades()
+            trade_updater.update_trade_prices_on_upload()
+            trade_aggregator.update_total_pnl_per_asset()
+            trade_aggregator.update_net_pnl()
+        else:
+            print("No new trades added. Skipping matching process.")
 
         response_message = {
             "status": "success",
-            "message": f"{new_trades_count} new trades added, {duplicates_count} duplicates found, {canceled_count} canceled trades ignored. {live_price_fetches_count} live price fetches required for open trades."
+            "message": f"{new_trades_count} new trades added, {duplicates_count} duplicates found,  {canceled_count} canceled trades ignored. {live_price_fetches_count} live price fetches required for open trades."
         }
 
         return Response(response_message, status=status.HTTP_201_CREATED)

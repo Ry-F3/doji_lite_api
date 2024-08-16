@@ -3,7 +3,7 @@ from django.core.cache import cache
 from django.conf import settings
 import logging
 # Import your model or wherever the trades are stored
-from .models import TradeUploadBlofin
+from trades_upload_csv.models import TradeUploadBlofin
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)

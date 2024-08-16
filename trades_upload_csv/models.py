@@ -18,7 +18,7 @@ class TradeUploadBlofin(models.Model):
     order_time = models.DateTimeField()
     side = models.CharField(max_length=4)
     avg_fill = models.DecimalField(
-        max_digits=20, decimal_places=10)
+        max_digits=40, decimal_places=20)
     price = models.DecimalField(
         max_digits=20, decimal_places=10)
     filled = models.DecimalField(
@@ -51,6 +51,8 @@ class TradeUploadBlofin(models.Model):
 
     class Meta:
         ordering = ['-order_time']
+        unique_together = ('underlying_asset',
+                           'avg_fill', 'fee')
 
     def __str__(self):
         return f"{self.underlying_asset} - {self.side}"
@@ -61,8 +63,18 @@ class LiveTrades(models.Model):
         User, on_delete=models.CASCADE, related_name='live_trades')
     asset = models.CharField(max_length=10)
     total_quantity = models.DecimalField(max_digits=20, decimal_places=10)
+    long_short = models.CharField(max_length=4, blank=True, null=True)
+    live_fill = models.DecimalField(
+        max_digits=20, decimal_places=10, blank=True, null=True)
+    live_price = models.DecimalField(
+        max_digits=20, decimal_places=10, blank=True, null=True)
+    live_pnl = models.DecimalField(
+        max_digits=20, decimal_places=2, null=True, blank=True)
+    live_percentage = models.DecimalField(
+        max_digits=20, decimal_places=2, null=True, blank=True)
     last_updated = models.DateTimeField(auto_now=True)
     trade_ids = models.TextField(default='[]')
+    is_live = models.BooleanField(default=True)
 
     def get_trade_ids(self):
         # Deserialize JSON string to list
