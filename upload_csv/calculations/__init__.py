@@ -1,0 +1,1 @@
+from upload_csv.calculations.long_short import calculate_trade_pnl_and_percentage
