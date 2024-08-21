@@ -4,6 +4,7 @@ from django.db.models import F, Sum, Case, When, IntegerField
 from upload_csv.models import TradeUploadBlofin, LiveTrades
 from upload_csv.api_handler.fmp_api import fetch_quote
 from django.db import transaction
+from decimal import Decimal
 import logging
 
 
@@ -67,15 +68,12 @@ class TradeMatcherProcessor:
 
 
     def process_asset_match(self, asset_name):
-        # Implement processing logic here
-        print("             ")
         print(f"Processing asset update for: {asset_name}")
 
         # Filter trades for the specified asset and owner
         trades = TradeUploadBlofin.objects.filter(
             owner=self.owner,
             underlying_asset=asset_name,
-          
         )
 
         # Separate trades into buys and sells
@@ -106,13 +104,13 @@ class TradeMatcherProcessor:
             if buy_status[i]['value'] == 0:
                 i += 1
 
-
         # Update the TradeUploadBlofin model
         self.update_trade_status(buy_status)
 
-        qty_sum = sum(item['value'] for item in buy_status if item['is_open'])
+        # Calculate the total quantity of open buys
+        qty_sum = sum(round(item['value'], 10) for item in buy_status if item['is_open'])
 
-        print("\nFinal state after processing:")
+        print(f"Final state after processing:")
         print(f"Buys status: {buy_status}")
         print(f"Sells remaining: {sell_status}")
         print(f"Total quantity of open buys: {qty_sum}")
@@ -121,9 +119,6 @@ class TradeMatcherProcessor:
         self.update_live_trades(asset_name, qty_sum)
 
     def update_trade_status(self, buy_status):
-        """
-        Update TradeUploadBlofin model based on the processed buy status.
-        """
         for buy in buy_status:
             trade = TradeUploadBlofin.objects.get(id=buy['id'])
             trade.is_matched = buy['is_matched']
@@ -132,31 +127,24 @@ class TradeMatcherProcessor:
             trade.save()
 
     def update_live_trades(self, asset_name, qty_sum):
-        # Fetch all open trades for the specified asset and owner
-        trades = TradeUploadBlofin.objects.filter(
+        # Determine if the asset is considered live
+        is_live = qty_sum > 0
+
+        print(f"Updating LiveTrades with qty_sum: {qty_sum} and is_live: {is_live}")
+
+        # Update or create LiveTrades entries
+        LiveTrades.objects.update_or_create(
             owner=self.owner,
-            underlying_asset=asset_name,
-            is_open=True  # Only consider open trades
+            asset=asset_name,
+            defaults={
+                'is_live': is_live,
+                'total_quantity': qty_sum
+            }
         )
 
-        # Check if there are any trades
-        if trades.exists():
-
-            # Determine if the asset is considered live
-            is_live = qty_sum > 0
-              
-
-            # Update or create LiveTrades entries
-            LiveTrades.objects.update_or_create(
-                owner=self.owner,
-                asset=asset_name,
-                defaults={
-                    'is_live': is_live,
-                    'total_quantity': qty_sum
-                }
-            )
-
-      
+        # Verify that the update was successful
+        live_trade = LiveTrades.objects.get(owner=self.owner, asset=asset_name)
+        print(f"Updated LiveTrades: {live_trade.total_quantity}, is_live: {live_trade.is_live}")
 
 
 class TradeIdMatcher:
