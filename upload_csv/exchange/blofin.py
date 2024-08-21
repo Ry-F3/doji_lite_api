@@ -43,12 +43,10 @@ class CsvProcessor:
             if trade:
                 if self.is_duplicate(trade):
                     duplicates_count += 1
-                    print(f"Duplicate found. Total duplicates so far: {
-                          duplicates_count}")
+                    print(f"Duplicate found. Total duplicates so far: {duplicates_count}")
                 else:
                     new_trades.append(trade)
-                    print(f"{row}) New trade added. Total new trades so far: {
-                          len(new_trades)}")
+                    print(f"{row}) New trade added. Total new trades so far: {len(new_trades)}")
             else:
                 print(f"{row}) Trade was None, not adding to new_trades.")
                 # duplicates_count = 1
@@ -78,14 +76,12 @@ class CsvProcessor:
         is_duplicate = duplicate_queryset.exists()
 
         if is_duplicate:
-            print(f"Duplicate check: Trade on {trade.order_time} with asset {
-                  trade.underlying_asset} is a duplicate.")
+            print(f"Duplicate check: Trade on {trade.order_time} with asset {trade.underlying_asset} is a duplicate.")
             # Log the duplicate trades for debugging
             for duplicate in duplicate_queryset:
                 logger.info(f"Duplicate found: {duplicate}")
         else:
-            print(f"Duplicate check: Trade on {trade.order_time} with asset {
-                  trade.underlying_asset} is not a duplicate.")
+            print(f"Duplicate check: Trade on {trade.order_time} with asset {trade.underlying_asset} is not a duplicate.")
 
         return is_duplicate
 
@@ -118,7 +114,7 @@ class BloFinHandler:
             # if underlying_asset in excluded_assets:
             #     return None
 
-            if underlying_asset not in ['BTCUSDT', 'ETHUSDT']:
+            if underlying_asset not in ['BTCUSDT', 'ARBUSDT']:
                 return None
 
             avg_fill = convert_to_decimal(row['Avg Fill'])
@@ -186,8 +182,7 @@ class BloFinHandler:
                         excess_duplicates = duplicate_queryset[1:]
 
                         # Log the warning
-                        logger.warning(f"Duplicate record found: {order_time}, {
-                                       underlying_asset}, {avg_fill}, {fee}")
+                        logger.warning(f"Duplicate record found: {order_time}, {underlying_asset}, {avg_fill}, {fee}")
 
                         # Delete the excess duplicates
                         excess_duplicates.delete()
@@ -296,16 +291,14 @@ class TradeUpdater:
             if symbol not in symbols:
                 continue
 
-            logger.debug(f"Fetching price for symbol: {
-                         symbol} on page: {page}")
+            logger.debug(f"Fetching price for symbol: {symbol} on page: {page}")
             current_price_data = fetch_quote(symbol)
 
             if current_price_data:
                 current_price = Decimal(
                     current_price_data[0].get('price', '0.0'))
                 current_prices[symbol] = current_price
-                logger.debug(f"Updated price for symbol {
-                             symbol}: {current_price}")
+                logger.debug(f"Updated price for symbol {symbol}: {current_price}")
             else:
                 current_prices[symbol] = Decimal('0.0')
                 logger.debug(f"No price data for symbol {symbol}")
@@ -345,6 +338,5 @@ class TradeUpdater:
         open_trades_needing_update = TradeUploadBlofin.objects.filter(
             is_open=True,
         ).count()
-        logger.debug(f"Open trades needing update: {
-                     open_trades_needing_update}")
+        logger.debug(f"Open trades needing update: {open_trades_needing_update}")
         return open_trades_needing_update

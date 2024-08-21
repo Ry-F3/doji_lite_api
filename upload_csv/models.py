@@ -65,7 +65,7 @@ class LiveTrades(models.Model):
         max_digits=20, decimal_places=2, null=True, blank=True)
     last_updated = models.DateTimeField(auto_now=True)
     trade_ids = models.TextField(default='[]')
-    is_live = models.BooleanField(default=True)
+    is_live = models.BooleanField(default=False)
 
     def get_trade_ids(self):
         # Deserialize JSON string to list

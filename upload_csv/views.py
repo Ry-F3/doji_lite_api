@@ -10,7 +10,6 @@ from .serializers import FileUploadSerializer, SaveTradeSerializer, LiveTradesSe
 from upload_csv.exchange.blofin import BloFinHandler, CsvProcessor, TradeUpdater
 from upload_csv.utils.process_invalid_data import process_invalid_data
 from upload_csv.exchange.blofin_trade_matcher import TradeIdMatcher
-from upload_csv.exchange.blofin_live_updater import LiveTradesUpdater
 
 
 class CsvTradeView(generics.ListAPIView):
@@ -44,7 +43,7 @@ class UploadFileView(generics.CreateAPIView):
         processor = CsvProcessor(handler)
         # trade_aggregator = TradeAggregator(owner=owner)
         trade_updater = TradeUpdater(owner)
-        live_trade_updater = LiveTradesUpdater()
+        # live_trade_updater = LiveTradesUpdater()
 
         # Convert DataFrame to a list of dictionaries
         csv_data = reader.to_dict('records')
@@ -67,7 +66,7 @@ class UploadFileView(generics.CreateAPIView):
         if new_trades_count > 0:
             matcher_id.check_trade_ids()
             # print("Actions to be taken")
-            live_trade_updater.update_live_trades()
+            # live_trade_updater.update_live_trades()
             trade_updater.update_trade_prices_on_upload()
             # trade_aggregator.update_total_pnl_per_asset()
             # trade_aggregator.update_net_pnl()
