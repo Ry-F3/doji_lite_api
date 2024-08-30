@@ -114,7 +114,7 @@ class BloFinHandler:
             # if underlying_asset in excluded_assets:
             #     return None
 
-            if underlying_asset not in ['ARBUSDT', 'BTCUSDT']:
+            if underlying_asset not in ['ARBUSDT', 'BTCUSDT', 'ETHUSDT']:
                 return None
 
             avg_fill = convert_to_decimal(row['Avg Fill'])

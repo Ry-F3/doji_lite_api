@@ -82,17 +82,24 @@ class TradeMatcherProcessor:
 
         # Convert to dictionaries for easier matching
         buy_status = [{'id': buy[0], 'value': buy[1], 'is_matched': False, 'is_partially_matched': False, 'is_open': True} for buy in buys]
-        sell_status = [{'id': sell[0], 'value': sell[1]} for sell in sells]
+        sell_status = [{'id': sell[0], 'value': sell[1], 'is_matched': False, 'is_partially_matched': False, 'is_open': True}  for sell in sells]
 
         i = 0  # Pointer for `buys`
         while i < len(buy_status) and sell_status:
             if buy_status[i]['value'] >= sell_status[0]['value']:
                 buy_status[i]['value'] -= sell_status[0]['value']
+                sell_status[0]['value'] = 0
+
+                # Ensure the sell is marked as matched before removal
+                sell_status[0]['is_matched'] = True
+                sell_status[0]['is_open'] = False
+                self.update_trade_status(sell_status)
                 sell_status.pop(0)
                 
                 if buy_status[i]['value'] == 0:
                     buy_status[i]['is_matched'] = True
                     buy_status[i]['is_open'] = False
+                    buy_status[i]['is_partially_matched'] = False
                 else:
                     buy_status[i]['is_partially_matched'] = True
             else:
@@ -100,12 +107,15 @@ class TradeMatcherProcessor:
                 buy_status[i]['value'] = 0
                 buy_status[i]['is_matched'] = True
                 buy_status[i]['is_open'] = False
+                buy_status[i]['is_partially_matched'] = False
             
             if buy_status[i]['value'] == 0:
                 i += 1
 
+
         # Update the TradeUploadBlofin model
         self.update_trade_status(buy_status)
+        self.update_trade_status(sell_status)
 
         # Calculate the total quantity of open buys
         qty_sum = sum(round(item['value'], 10) for item in buy_status if item['is_open'])
