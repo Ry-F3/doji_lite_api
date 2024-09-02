@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from rest_framework.permissions import IsAuthenticated
 from rest_framework import generics, filters
 from rest_framework.response import Response
 from rest_framework import status
@@ -16,6 +17,7 @@ from upload_csv.exchange.blofin_trade_matcher import TradeIdMatcher
 
 class CsvTradeView(generics.ListAPIView):
     serializer_class = SaveTradeSerializer
+    permission_classes = [IsAuthenticated] 
     queryset = TradeUploadBlofin.objects.all().order_by('-order_time')
     filter_backends = [DjangoFilterBackend,
                        filters.OrderingFilter, filters.SearchFilter]
@@ -26,6 +28,7 @@ class CsvTradeView(generics.ListAPIView):
 
 
 class UploadFileView(generics.CreateAPIView):
+    permission_classes = [IsAuthenticated] 
     serializer_class = FileUploadSerializer
 
     def post(self, request, *args, **kwargs):
@@ -86,6 +89,7 @@ class UploadFileView(generics.CreateAPIView):
 class LiveTradesListView(generics.ListAPIView):
     
     serializer_class = LiveTradesSerializer
+    permission_classes = [IsAuthenticated] 
 
     def get_queryset(self):
         owner = self.request.user
