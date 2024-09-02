@@ -2,12 +2,14 @@ from django.shortcuts import render
 from rest_framework import generics, filters
 from rest_framework.response import Response
 from rest_framework import status
+from django.utils import timezone
 import logging
 import pandas as pd
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import TradeUploadBlofin, LiveTrades
-from .serializers import FileUploadSerializer, SaveTradeSerializer, LiveTradesSerializer
+from .serializers import FileUploadSerializer, SaveTradeSerializer, LiveTradesSerializer, LiveFillSerializer
 from upload_csv.exchange.blofin import BloFinHandler, CsvProcessor, TradeUpdater
+from upload_csv.exchange.live_price_updater import LiveTradeUpdater
 from upload_csv.utils.process_invalid_data import process_invalid_data
 from upload_csv.exchange.blofin_trade_matcher import TradeIdMatcher
 
@@ -82,5 +84,48 @@ class UploadFileView(generics.CreateAPIView):
 
 
 class LiveTradesListView(generics.ListAPIView):
-    queryset = LiveTrades.objects.all()
+    
     serializer_class = LiveTradesSerializer
+
+    def get_queryset(self):
+        owner = self.request.user
+        live_price_updater = LiveTradeUpdater()
+        live_price_updater.update_live_prices_for_live_trades()
+        return LiveTrades.objects.filter(owner=owner)
+
+
+    
+class LiveTradesUpdateView(generics.UpdateAPIView):
+    """
+    API view to update the `live_fill` field of a LiveTrade instance.
+    """
+    serializer_class = LiveFillSerializer
+
+    def get_object(self):
+        """
+        Return the LiveTrades instance that the view is displaying.
+        """
+        try:
+            return LiveTrades.objects.get(pk=self.kwargs['pk'], owner=self.request.user)
+        except LiveTrades.DoesNotExist:
+            raise Http404
+
+    def put(self, request, *args, **kwargs):
+        """
+        Handle PUT request to update the `live_fill` field.
+        """
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        if serializer.is_valid():
+            self.perform_update(serializer)
+            asset_name = instance.asset
+            return Response({'message': f'Live fill updated successfully for {asset_name}', 'live_fill': serializer.data.get('live_fill')}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def perform_update(self, serializer):
+        """
+        Save the updated `live_fill` field.
+        """
+        instance = serializer.save()
+        instance.last_updated = timezone.now()  # Update the timestamp
+        instance.save()

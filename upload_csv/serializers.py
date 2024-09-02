@@ -5,6 +5,10 @@ from decimal import Decimal
 from django.contrib.auth.models import User
 from upload_csv.utils.convert_fields_to_readable import FormattingUtils
 
+class LiveFillSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LiveTrades
+        fields = ['live_fill']  # Only include the live_fill field
 
 class LiveTradesSerializer(serializers.ModelSerializer):
     class Meta:

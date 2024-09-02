@@ -224,6 +224,7 @@ class TradeIdMatcher:
                 self.put(asset, ids)
 
         return asset_ids
+        
 
     def put(self, asset_name, new_trade_ids, live_trade=None):
         # Fetch or create LiveTrades entry for the asset

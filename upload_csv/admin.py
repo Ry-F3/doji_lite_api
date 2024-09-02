@@ -7,8 +7,7 @@ from upload_csv.utils.convert_fields_to_readable import FormattingUtils
 class TradeUploadBlofinAdmin(admin.ModelAdmin):
     list_display = ('id', 'owner', 'underlying_asset_formatted', 'margin_mode', 'leverage',
                     'order_time', 'side', 'avg_fill_formatted', 'price_formatted', 'filled_quantity_formatted',
-                    'original_filled_quantity_formatted',
-                    'pnl_formatted', 'pnl_percentage_formatted', 'fee', 'reduce_only', 'trade_status',
+                    'pnl_formatted', 'pnl_percentage_formatted', 'fee', 'trade_status',
                     'exchange', 'is_open', 'is_matched', 'is_partially_matched', 'last_updated')
     list_filter = ('owner', 'underlying_asset', 'side', 'exchange',
                    'is_open', 'is_matched', 'is_partially_matched')
@@ -27,10 +26,6 @@ class TradeUploadBlofinAdmin(admin.ModelAdmin):
     def filled_quantity_formatted(self, obj):
         return FormattingUtils.formatted_value(obj.filled_quantity)
     filled_quantity_formatted.short_description = 'Quantity'
-
-    def original_filled_quantity_formatted(self, obj):
-        return FormattingUtils.formatted_value(obj.original_filled_quantity)
-    original_filled_quantity_formatted.short_description = 'Original Quantity'
 
     def pnl_formatted(self, obj):
         return FormattingUtils.formatted_pnl(obj.pnl, obj.avg_fill, obj.price, obj.is_open)
