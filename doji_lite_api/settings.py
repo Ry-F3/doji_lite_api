@@ -73,7 +73,7 @@ ALLOWED_HOSTS = [os.environ.get('ALLOWED_HOST'),
 # Add to the readme
 CSRF_TRUSTED_ORIGINS = [
     'https://8000-ryf3-dojiliteapi-swnyjyt30un.ws-eu115.gitpod.io',
-    'https://8080-ryf3-dojilite-kvemra798u0.ws-eu115.gitpod.io',
+    'https://8080-ryf3-dojilite-kvemra798u0.ws-eu116.gitpod.io',
     'https://doji-lite-api-a2da6b12178c.herokuapp.com',
     'https://doji-lite-4b727b4dd529.herokuapp.com']
 
