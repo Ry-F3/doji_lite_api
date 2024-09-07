@@ -17,7 +17,7 @@ from upload_csv.exchange.blofin_trade_matcher import TradeIdMatcher
 
 class CsvTradeView(generics.ListAPIView):
     serializer_class = SaveTradeSerializer
-    permission_classes = [IsAuthenticated] 
+    # permission_classes = [IsAuthenticated] 
     queryset = TradeUploadBlofin.objects.all().order_by('-order_time')
     filter_backends = [DjangoFilterBackend,
                        filters.OrderingFilter, filters.SearchFilter]
@@ -41,7 +41,7 @@ class DeleteAllTradesAndLiveTradesView(generics.DestroyAPIView):
 
 
 class UploadFileView(generics.CreateAPIView):
-    permission_classes = [IsAuthenticated] 
+    # permission_classes = [IsAuthenticated] 
     serializer_class = FileUploadSerializer
     # Restrict allowed methods to POST only
     allowed_methods = ['POST']
