@@ -26,6 +26,19 @@ class CsvTradeView(generics.ListAPIView):
                        'underlying_asset', 'side', 'is_open', 'is_matched']
     ordering = ['-order_time']
 
+class DeleteAllTradesAndLiveTradesView(generics.DestroyAPIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, *args, **kwargs):
+        # Delete all trades
+        trade_count, _ = TradeUploadBlofin.objects.all().delete()
+        # Delete all live trades
+        live_trade_count, _ = LiveTrades.objects.all().delete()
+
+        return Response({
+            "message": f"{trade_count} trades and {live_trade_count} live trades deleted."
+        }, status=status.HTTP_204_NO_CONTENT)
+
 
 class UploadFileView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated] 
