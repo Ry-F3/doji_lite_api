@@ -47,6 +47,15 @@ REST_AUTH_SERIALIZERS = {
     'USER_DETAILS_SERIALIZER': 'doji_lite_api.serializers.CurrentUserSerializer'
 }
 
+CORS_ALLOW_HEADERS = [
+    'content-type',
+    'x-requested-with',
+    'authorization',
+    'accept',
+    'origin',
+    'x-csrftoken'
+]
+
 REST_USE_JWT = True  # enable token auth
 JWT_AUTH_SECURE = True  # sent over https only
 JWT_AUTH_COOKIE = 'my-app-auth'  # declare cookie name access
