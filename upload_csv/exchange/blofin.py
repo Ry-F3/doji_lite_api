@@ -14,12 +14,11 @@ from django.utils import timezone
 from django.db.models import Sum, Q
 from collections import deque, defaultdict
 import requests
-import logging
+
 import pytz
 
 
-# Set up logging
-logger = logging.getLogger(__name__)
+
 
 
 class CsvProcessor:
@@ -43,17 +42,17 @@ class CsvProcessor:
             if trade:
                 if self.is_duplicate(trade):
                     duplicates_count += 1
-                    print(f"Duplicate found. Total duplicates so far: {duplicates_count}")
+                    # print(f"Duplicate found. Total duplicates so far: {duplicates_count}")
                 else:
                     new_trades.append(trade)
-                    print(f"{row}) New trade added. Total new trades so far: {len(new_trades)}")
+                    # print(f"{row}) New trade added. Total new trades so far: {len(new_trades)}")
             else:
-                print(f"{row}) Trade was None, not adding to new_trades.")
+                # print(f"{row}) Trade was None, not adding to new_trades.")
                 # duplicates_count = 1
                 duplicates.append(trade)
 
-        print(f"Final duplicate count: {len(duplicates)}")
-        print(f"Final new trades count: {len(new_trades)}")
+        # print(f"Final duplicate count: {len(duplicates)}")
+        # print(f"Final new trades count: {len(new_trades)}")
 
         # Bulk create new trades in the database
         TradeUploadBlofin.objects.bulk_create(new_trades)
@@ -78,8 +77,7 @@ class CsvProcessor:
         if is_duplicate:
             print(f"Duplicate check: Trade on {trade.order_time} with asset {trade.underlying_asset} is a duplicate.")
             # Log the duplicate trades for debugging
-            for duplicate in duplicate_queryset:
-                logger.info(f"Duplicate found: {duplicate}")
+            
         else:
             print(f"Duplicate check: Trade on {trade.order_time} with asset {trade.underlying_asset} is not a duplicate.")
 
@@ -148,7 +146,7 @@ class BloFinHandler:
                     )
                     price = current_price
                 except DivisionByZero:
-                    logger.error(f"Division by zero error for trade: {row}")
+                  
                     pnl_percentage, pnl = Decimal('0.0'), Decimal('0.0')
             else:
                 price = price
@@ -181,8 +179,7 @@ class BloFinHandler:
                         # Get all but the first duplicate
                         excess_duplicates = duplicate_queryset[1:]
 
-                        # Log the warning
-                        logger.warning(f"Duplicate record found: {order_time}, {underlying_asset}, {avg_fill}, {fee}")
+                        #
 
                         # Delete the excess duplicates
                         excess_duplicates.delete()
@@ -216,7 +213,7 @@ class BloFinHandler:
             return trade_upload_csv
 
         except (InvalidOperation, ValueError) as e:
-            logger.error(f"Error processing row: {e}")
+           
             return None
 
 
@@ -229,7 +226,7 @@ class TradeUpdater:
         open_trades = TradeUploadBlofin.objects.filter(
             is_open=True, owner=self.owner).order_by('order_time')
 
-        logger.debug(f"Updating prices for {open_trades.count()} open trades")
+      
 
         api_request_count = 0
 
@@ -256,7 +253,7 @@ class TradeUpdater:
                         current_price, avg_fill, leverage, long_short, filled_quantity
                     )
                 except DivisionByZero:
-                    logger.error(f"Division by zero error for trade: {trade}")
+                  
                     pnl_percentage, pnl = Decimal('0.0'), Decimal('0.0')
 
                 trade.pnl_percentage = pnl_percentage
@@ -267,7 +264,7 @@ class TradeUpdater:
                 #              current_price}, PnL: {pnl}, PnL %: {pnl_percentage}")
 
             except Exception as e:
-                logger.error(
+                print(
                     f"Error updating trade prices for symbol {symbol}: {e}")
 
     def update_trade_prices_by_page(self, owner, page=1, symbols=[]):
@@ -280,9 +277,9 @@ class TradeUpdater:
             paginated_trades = paginator.get_page(page)
             symbols_by_page = {
                 trade.underlying_asset for trade in paginated_trades}
-            logger.debug(f"Page {page} symbols to process: {symbols_by_page}")
+           
         except EmptyPage:
-            logger.error(f"Page {page} is empty.")
+            print(f"Page {page} is empty.")
             return
 
         # Fetch live prices for the symbols on the current page
@@ -291,17 +288,17 @@ class TradeUpdater:
             if symbol not in symbols:
                 continue
 
-            logger.debug(f"Fetching price for symbol: {symbol} on page: {page}")
+           
             current_price_data = fetch_quote(symbol)
 
             if current_price_data:
                 current_price = Decimal(
                     current_price_data[0].get('price', '0.0'))
                 current_prices[symbol] = current_price
-                logger.debug(f"Updated price for symbol {symbol}: {current_price}")
+             
             else:
                 current_prices[symbol] = Decimal('0.0')
-                logger.debug(f"No price data for symbol {symbol}")
+            
 
         # Update trades with the fetched prices
         for trade in paginated_trades:
@@ -309,7 +306,7 @@ class TradeUpdater:
                 self.update_trade(
                     trade, current_prices[trade.underlying_asset])
 
-        logger.debug(f"Updated prices for page {page}")
+       
 
     def update_trade(self, trade, current_price):
         """Update trade attributes based on the current price and save."""
@@ -338,5 +335,5 @@ class TradeUpdater:
         open_trades_needing_update = TradeUploadBlofin.objects.filter(
             is_open=True,
         ).count()
-        logger.debug(f"Open trades needing update: {open_trades_needing_update}")
+        
         return open_trades_needing_update

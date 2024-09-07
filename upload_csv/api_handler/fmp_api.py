@@ -1,13 +1,13 @@
 import requests
 from django.core.cache import cache
 from django.conf import settings
-import logging
+# import logging
 # Import your model or wherever the trades are stored
 from upload_csv.models import TradeUploadBlofin
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+# logging.basicConfig(level=logging.DEBUG)
+# logger = logging.getLogger(__name__)
 
 
 def fetch_quote(symbol):
@@ -23,6 +23,6 @@ def fetch_quote(symbol):
             # logger.debug(f"Fetched data for symbol {symbol}: {data}")
             return data
     except requests.RequestException as e:
-        logger.error(f"Request error for symbol")
+        print(f"Request error for symbol")
 
     return []

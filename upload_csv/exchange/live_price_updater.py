@@ -2,11 +2,11 @@ import requests
 from django.utils import timezone  # Ensure you have this import
 from upload_csv.models import LiveTrades
 from upload_csv.api_handler.fmp_api import fetch_quote
-import logging
+# import logging
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
+# logging.basicConfig(level=logging.DEBUG)
+# logger = logging.getLogger(__name__)
 
 
 class LiveTradeUpdater():
@@ -24,4 +24,4 @@ class LiveTradeUpdater():
             trade.live_price = live_price
             trade.last_updated = timezone.now()  # Update the timestamp
             trade.save()
-            logger.info(f"Updated LiveTrades for asset {trade.asset} with new live price: {live_price}")
+            # logger.info(f"Updated LiveTrades for asset {trade.asset} with new live price: {live_price}")

@@ -43,8 +43,11 @@ class DeleteAllTradesAndLiveTradesView(generics.DestroyAPIView):
 class UploadFileView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated] 
     serializer_class = FileUploadSerializer
+    # Restrict allowed methods to POST only
+    allowed_methods = ['POST']
 
     def post(self, request, *args, **kwargs):
+        print(f"Request method: {request.method}")
         owner = request.user
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)

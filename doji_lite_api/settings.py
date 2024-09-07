@@ -47,14 +47,7 @@ REST_AUTH_SERIALIZERS = {
     'USER_DETAILS_SERIALIZER': 'doji_lite_api.serializers.CurrentUserSerializer'
 }
 
-CORS_ALLOW_HEADERS = [
-    'content-type',
-    'x-requested-with',
-    'authorization',
-    'accept',
-    'origin',
-    'x-csrftoken'
-]
+
 
 REST_USE_JWT = True  # enable token auth
 JWT_AUTH_SECURE = True  # sent over https only
@@ -72,8 +65,8 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 FMP_API_KEY = os.getenv('FMP_API_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# DEBUG = 'DEV' in os.environ
-DEBUG = True
+DEBUG = 'DEV' in os.environ
+# DEBUG = True
 
 ALLOWED_HOSTS = [os.environ.get('ALLOWED_HOST'),
                  'localhost', '8000-ryf3-dojiliteapi-swnyjyt30un.ws-eu116.gitpod.io']

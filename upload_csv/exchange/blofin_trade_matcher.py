@@ -5,14 +5,14 @@ from upload_csv.models import TradeUploadBlofin, LiveTrades
 from upload_csv.api_handler.fmp_api import fetch_quote
 from django.db import transaction
 from decimal import Decimal
-import logging
+# import logging
 
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-logger.addHandler(handler)
+# logger = logging.getLogger(__name__)
+# logger.setLevel(logging.INFO)
+# handler = logging.StreamHandler()
+# handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+# logger.addHandler(handler)
 
 
 
@@ -38,18 +38,18 @@ class TradeMatcherProcessor:
             )
 
             if not trades.exists():
-                logger.info(f"No trades found for asset {asset_name}. Skipping revert.")
+                print(f"No trades found for asset {asset_name}. Skipping revert.")
                 return
 
             for trade in trades:
                 original_value = trade.original_filled_quantity
                 if original_value is None:
-                    logger.warning(f"Trade ID={trade.id} does not have an original_filled_quantity. Skipping revert.")
+                    print(f"Trade ID={trade.id} does not have an original_filled_quantity. Skipping revert.")
                     continue
 
                 try:
                     # Log the before value
-                    logger.info(f"Before: Trade ID={trade.id} was {trade.filled_quantity}, reverting to {original_value}.")
+                    # logger.info(f"Before: Trade ID={trade.id} was {trade.filled_quantity}, reverting to {original_value}.")
 
                     # Update the trade
                     TradeUploadBlofin.objects.filter(id=trade.id).update(
@@ -61,10 +61,10 @@ class TradeMatcherProcessor:
 
                     # Log the after value
                     updated_trade = TradeUploadBlofin.objects.get(id=trade.id)
-                    logger.info(f"Reverted trade ID={updated_trade.id} to {updated_trade.filled_quantity}.")
+                    # logger.info(f"Reverted trade ID={updated_trade.id} to {updated_trade.filled_quantity}.")
 
                 except Exception as e:
-                    logger.error(f"Failed to revert trade ID={trade.id}. Error: {e}")
+                    print(f"Failed to revert trade ID={trade.id}. Error: {e}")
 
 
     def process_asset_match(self, asset_name):
@@ -120,10 +120,10 @@ class TradeMatcherProcessor:
         # Calculate the total quantity of open buys
         qty_sum = sum(round(item['value'], 10) for item in buy_status if item['is_open'])
 
-        print(f"Final state after processing:")
-        print(f"Buys status: {buy_status}")
-        print(f"Sells remaining: {sell_status}")
-        print(f"Total quantity of open buys: {qty_sum}")
+        # print(f"Final state after processing:")
+        # print(f"Buys status: {buy_status}")
+        # print(f"Sells remaining: {sell_status}")
+        # print(f"Total quantity of open buys: {qty_sum}")
 
         # Update live trades
         self.update_live_trades(asset_name, qty_sum)
@@ -140,7 +140,7 @@ class TradeMatcherProcessor:
         # Determine if the asset is considered live
         is_live = qty_sum > 0
 
-        print(f"Updating LiveTrades with qty_sum: {qty_sum} and is_live: {is_live}")
+        # print(f"Updating LiveTrades with qty_sum: {qty_sum} and is_live: {is_live}")
 
         # Update or create LiveTrades entries
         LiveTrades.objects.update_or_create(
@@ -154,22 +154,22 @@ class TradeMatcherProcessor:
 
         # Verify that the update was successful
         live_trade = LiveTrades.objects.get(owner=self.owner, asset=asset_name)
-        print(f"Updated LiveTrades: {live_trade.total_quantity}, is_live: {live_trade.is_live}")
+        # print(f"Updated LiveTrades: {live_trade.total_quantity}, is_live: {live_trade.is_live}")
 
 
 class TradeIdMatcher:
     def __init__(self, owner):
         self.owner = owner
-        print("TradeIdMatcher initialized.")
+        # print("TradeIdMatcher initialized.")
 
     def check_trade_ids(self):
-        print("Checking ids")
+        # print("Checking ids")
 
         # Fetch trades for the given owner
         trades = TradeUploadBlofin.objects.filter(owner=self.owner)
-        print("             ")
-        print(f"Fetched {trades.count()} trades for owner {self.owner}")
-        print("             ")
+        # print("             ")
+        # print(f"Fetched {trades.count()} trades for owner {self.owner}")
+        # print("             ")
 
         # Dictionary to hold asset IDs and associated trades
         asset_ids = {}
@@ -242,10 +242,10 @@ class TradeIdMatcher:
             live_trade.live_price = live_price
             live_trade.last_updated = timezone.now()  # Update the timestamp
             live_trade.save()
-            print("             ")
-            print(f"Updated LiveTrades for asset {
-                  asset_name} with new trade IDs.")
-            print("             ")
+            # print("             ")
+            # print(f"Updated LiveTrades for asset {
+            #       asset_name} with new trade IDs.")
+            # print("             ")
 
         else:
             # Create a new LiveTrades entry
@@ -260,10 +260,10 @@ class TradeIdMatcher:
 
             )
             live_trade.save()
-            print("             ")
-            print(f"Created new LiveTrades entry for asset {
-                  asset_name} with trade IDs: {new_trade_ids}")
-            print("             ")
+            # print("             ")
+            # print(f"Created new LiveTrades entry for asset {
+            #       asset_name} with trade IDs: {new_trade_ids}")
+            # print("             ")
 
         # Pass the asset name to TradeMatcherProcessor
         processor = TradeMatcherProcessor(owner=self.owner)

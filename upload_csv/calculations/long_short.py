@@ -5,15 +5,15 @@ def calculate_trade_pnl_and_percentage(current_price, avg_fill, leverage, long_s
     """Calculate PnL and percentage change based on trade details."""
     # Calculate percentage change
     if long_short == 'Buy':
-        print("calc Buy")
+        # print("calc Buy")
         percentage_change = (
             (current_price - avg_fill) / avg_fill) * leverage * 100
     elif long_short == 'Sell':
-        print("calc Sell")
+        # print("calc Sell")
         percentage_change = (
             (avg_fill - current_price) / avg_fill) * leverage * 100
     else:
-        print("calc Pass")
+        # print("calc Pass")
         pass
 
     # Calculate return PnL
