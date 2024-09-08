@@ -126,10 +126,12 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'doji_lite_api.urls'
 
-if 'CLIENT_ORIGIN' in os.environ:
-    CORS_ALLOWED_ORIGINS = [
-        os.environ.get('CLIENT_ORIGIN')
-    ]
+# if 'CLIENT_ORIGIN' in os.environ:
+#     CORS_ALLOWED_ORIGINS = [
+#         os.environ.get('CLIENT_ORIGIN')
+#     ]
+
+CORS_ALLOW_ALL_ORIGINS = True
 
 
 # CORS_ALLOW_ALL_ORIGINS = True
