@@ -72,6 +72,12 @@ ALLOWED_HOSTS = [os.environ.get('ALLOWED_HOST'),
                  'localhost', '8000-ryf3-dojiliteapi-swnyjyt30un.ws-eu116.gitpod.io']
 # ,'8000-ryf3-dojiliteapi-24c5zqyja2a.ws.codeinstitute-ide.net'
 
+# Add to the readme
+CSRF_TRUSTED_ORIGINS = [
+    'https://8000-ryf3-dojiliteapi-swnyjyt30un.ws-eu116.gitpod.io',
+    'https://8080-ryf3-dojilite-kvemra798u0.ws-eu116.gitpod.io',
+    'https://doji-lite-api-a2da6b12178c.herokuapp.com',
+    'https://doji-lite-4b727b4dd529.herokuapp.com']
 
 # Application definition
 
@@ -118,29 +124,15 @@ MIDDLEWARE = [
 
 ]
 
-# Add to the readme
-CSRF_TRUSTED_ORIGINS = [
-    'https://8000-ryf3-dojiliteapi-swnyjyt30un.ws-eu116.gitpod.io',
-    'https://8080-ryf3-dojilite-kvemra798u0.ws-eu116.gitpod.io',
-    'https://doji-lite-api-a2da6b12178c.herokuapp.com',
-    'https://doji-lite-4b727b4dd529.herokuapp.com']
-
 ROOT_URLCONF = 'doji_lite_api.urls'
 
-if 'DEV' in os.environ:
-    CORS_ALLOW_ALL_ORIGINS = True
-else:
+if 'CLIENT_ORIGIN' in os.environ:
     CORS_ALLOWED_ORIGINS = [
-        os.environ.get('CLIENT_ORIGIN'),
-        'https://doji-lite-4b727b4dd529.herokuapp.com',
-        'https://doji-lite-api-a2da6b12178c.herokuapp.com',
-        'https://8080-ryf3-dojilite-kvemra798u0.ws-eu116.gitpod.io',
-        'https://8000-ryf3-dojiliteapi-swnyjyt30un.ws-eu116.gitpod.io',
+        os.environ.get('CLIENT_ORIGIN')
     ]
 
-CORS_ALLOW_CREDENTIALS = True  # Necessary for secure cookie-based auth
 
-
+# CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
 
