@@ -44,73 +44,78 @@ class DeleteAllTradesAndLiveTradesView(generics.DestroyAPIView):
 
 
 class UploadFileView(generics.CreateAPIView):
-    # permission_classes = [IsAuthenticated] 
+    # permission_classes = [IsAuthenticated]
     serializer_class = FileUploadSerializer
-    # Restrict allowed methods to POST only
 
     def options(self, request, *args, **kwargs):
         logger.debug(f"Handling OPTIONS request. Headers: {request.headers}")
         return Response(status=status.HTTP_200_OK)
 
-
     def post(self, request, *args, **kwargs):
-   
+        logger.debug(f"Handling POST request. Headers: {request.headers}")
+        logger.debug(f"Request data: {request.data}")
         
-        # # Handle CORS preflight requests
-        # if request.method == 'OPTIONS':
-        #     print(f"Handling OPTIONS request. Headers: {request.headers}")
-        #     return Response(status=status.HTTP_200_OK)
         owner = request.user
+        logger.debug(f"Request user: {owner}")
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         file = serializer.validated_data['file']
         exchange = serializer.validated_data.get('exchange', None)
 
+        logger.debug(f"Exchange value: {exchange}")
+
         if exchange != 'BloFin':
+            logger.warning(f"Exchange '{exchange}' is not supported.")
             return Response({"error": "Sorry, under construction."}, status=status.HTTP_400_BAD_REQUEST)
 
-        reader = pd.read_csv(file)
-
-        handler = BloFinHandler()
-        matcher_id = TradeIdMatcher(owner)
-        processor = CsvProcessor(handler)
-        # trade_aggregator = TradeAggregator(owner=owner)
-        trade_updater = TradeUpdater(owner)
-        # live_trade_updater = LiveTradesUpdater()
-
-        # Convert DataFrame to a list of dictionaries
-        csv_data = reader.to_dict('records')
+        try:
+            reader = pd.read_csv(file)
+            logger.debug(f"CSV file read successfully. Number of rows: {len(reader)}")
+        except Exception as e:
+            logger.error(f"Error reading CSV file: {str(e)}")
+            return Response({"error": "Error reading CSV file."}, status=status.HTTP_400_BAD_REQUEST)
 
         required_columns = {'Underlying Asset', 'Margin Mode', 'Leverage', 'Order Time', 'Side', 'Avg Fill',
                             'Price', 'Filled', 'Total', 'PNL', 'PNL%', 'Fee', 'Order Options', 'Reduce-only', 'Status'}
-        if not required_columns.issubset(reader.columns):
-            missing_cols = required_columns - set(reader.columns)
+        missing_cols = required_columns - set(reader.columns)
+        if missing_cols:
+            logger.warning(f"Missing columns: {', '.join(missing_cols)}")
             return Response({"error": f"Missing Columns: {', '.join(missing_cols)}"})
 
         unexpected_cols = set(reader.columns) - required_columns
         if unexpected_cols:
+            logger.warning(f"Unexpected columns found: {', '.join(unexpected_cols)}")
             return Response({"error": f"Unexpected columns found: {', '.join(unexpected_cols)}"}, status=status.HTTP_400_BAD_REQUEST)
 
+        csv_data = reader.to_dict('records')
+        logger.debug(f"CSV data converted to list of dictionaries. Number of records: {len(csv_data)}")
+
+        handler = BloFinHandler()
+        matcher_id = TradeIdMatcher(owner)
+        processor = CsvProcessor(handler)
+        trade_updater = TradeUpdater(owner)
+
+        logger.debug(f"Starting CSV processing.")
         new_trades_count, duplicates, canceled_count = processor.process_csv_data(
             csv_data, owner, exchange)
+        logger.debug(f"CSV processing complete. New trades count: {new_trades_count}, Duplicates: {duplicates}, Canceled count: {canceled_count}")
 
         live_price_fetches_count = trade_updater.count_open_trades_for_price_fetch()
+        logger.debug(f"Live price fetches count: {live_price_fetches_count}")
 
         if new_trades_count > 0:
             matcher_id.check_trade_ids()
-            # print("Actions to be taken")
-            # live_trade_updater.update_live_trades()
             trade_updater.update_trade_prices_on_upload()
-            # trade_aggregator.update_total_pnl_per_asset()
-            # trade_aggregator.update_net_pnl()
         else:
-            print("No new trades added. Skipping matching process.")
+            logger.info("No new trades added. Skipping matching process.")
 
         response_message = {
             "status": "success",
             "message": f"{new_trades_count} new trades added, {duplicates} duplicates found,  {canceled_count} canceled trades ignored. "
         }
 
+        logger.debug(f"Response message: {response_message}")
         return Response(response_message, status=status.HTTP_201_CREATED)
 
 
