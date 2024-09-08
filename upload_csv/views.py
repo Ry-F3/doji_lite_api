@@ -13,6 +13,9 @@ from upload_csv.exchange.blofin import BloFinHandler, CsvProcessor, TradeUpdater
 from upload_csv.exchange.live_price_updater import LiveTradeUpdater
 from upload_csv.utils.process_invalid_data import process_invalid_data
 from upload_csv.exchange.blofin_trade_matcher import TradeIdMatcher
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class CsvTradeView(generics.ListAPIView):
@@ -44,10 +47,19 @@ class UploadFileView(generics.CreateAPIView):
     # permission_classes = [IsAuthenticated] 
     serializer_class = FileUploadSerializer
     # Restrict allowed methods to POST only
-    allowed_methods = ['POST']
+
+    def options(self, request, *args, **kwargs):
+        logger.debug(f"Handling OPTIONS request. Headers: {request.headers}")
+        return Response(status=status.HTTP_200_OK)
+
 
     def post(self, request, *args, **kwargs):
-        print(f"Request method: {request.method}")
+   
+        
+        # # Handle CORS preflight requests
+        # if request.method == 'OPTIONS':
+        #     print(f"Handling OPTIONS request. Headers: {request.headers}")
+        #     return Response(status=status.HTTP_200_OK)
         owner = request.user
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
