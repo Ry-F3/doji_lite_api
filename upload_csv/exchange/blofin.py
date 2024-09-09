@@ -104,16 +104,16 @@ class BloFinHandler:
 
             underlying_asset = row['Underlying Asset']
 
-            # Define a set of assets to exclude
-            excluded_assets = {'BOMEUSDT',
-                               'POPCATUSDT', 'GMEUSDT', 'BRETTUSDT'}
+            # # Define a set of assets to exclude
+            # excluded_assets = {'BOMEUSDT',
+            #                    'POPCATUSDT', 'GMEUSDT', 'BRETTUSDT'}
 
-            # Check if the underlying asset is in the excluded list
-            if underlying_asset in excluded_assets:
-                return None
-
-            # if underlying_asset not in ['ARBUSDT', 'BTCUSDT', 'ETHUSDT']:
+            # # Check if the underlying asset is in the excluded list
+            # if underlying_asset in excluded_assets:
             #     return None
+
+            if underlying_asset not in ['ARBUSDT', 'BTCUSDT', 'ETHUSDT', 'RUNEUSDT', 'INJUSDT', 'VRAUSDT', 'LDOUSDT','WIFUSDT', 'GMXUSDT' ]:
+                return None
 
             avg_fill = convert_to_decimal(row['Avg Fill'])
             pnl = convert_to_decimal(row['PNL'])
