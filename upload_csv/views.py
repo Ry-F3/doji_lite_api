@@ -13,6 +13,7 @@ from upload_csv.exchange.blofin import BloFinHandler, CsvProcessor, TradeUpdater
 from upload_csv.exchange.live_price_updater import LiveTradeUpdater
 from upload_csv.utils.process_invalid_data import process_invalid_data
 from upload_csv.exchange.blofin_trade_matcher import TradeIdMatcher
+import time
 import logging
 
 logger = logging.getLogger(__name__)
@@ -46,12 +47,17 @@ class DeleteAllTradesAndLiveTradesView(generics.DestroyAPIView):
 class UploadFileView(generics.CreateAPIView):
     # permission_classes = [IsAuthenticated]
     serializer_class = FileUploadSerializer
+    http_method_names = ['post', 'options', 'head']
 
     def options(self, request, *args, **kwargs):
         logger.debug(f"Handling OPTIONS request. Headers: {request.headers}")
         return Response(status=status.HTTP_200_OK)
 
+    def get(self, request, *args, **kwargs):
+        return Response({"detail": "Method 'GET' not allowed."}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
     def post(self, request, *args, **kwargs):
+        start_time = time.time()
         logger.debug(f"Handling POST request. Headers: {request.headers}")
         logger.debug(f"Request data: {request.data}")
         
@@ -69,50 +75,81 @@ class UploadFileView(generics.CreateAPIView):
             logger.warning(f"Exchange '{exchange}' is not supported.")
             return Response({"error": "Sorry, under construction."}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            reader = pd.read_csv(file)
-            logger.debug(f"CSV file read successfully. Number of rows: {len(reader)}")
-        except Exception as e:
-            logger.error(f"Error reading CSV file: {str(e)}")
-            return Response({"error": "Error reading CSV file."}, status=status.HTTP_400_BAD_REQUEST)
-
+        # Define required columns
         required_columns = {'Underlying Asset', 'Margin Mode', 'Leverage', 'Order Time', 'Side', 'Avg Fill',
                             'Price', 'Filled', 'Total', 'PNL', 'PNL%', 'Fee', 'Order Options', 'Reduce-only', 'Status'}
-        missing_cols = required_columns - set(reader.columns)
-        if missing_cols:
-            logger.warning(f"Missing columns: {', '.join(missing_cols)}")
-            return Response({"error": f"Missing Columns: {', '.join(missing_cols)}"})
 
-        unexpected_cols = set(reader.columns) - required_columns
-        if unexpected_cols:
-            logger.warning(f"Unexpected columns found: {', '.join(unexpected_cols)}")
-            return Response({"error": f"Unexpected columns found: {', '.join(unexpected_cols)}"}, status=status.HTTP_400_BAD_REQUEST)
+        # Process the CSV file in chunks
+        chunk_size = 10000  # Number of rows per chunk
+        new_trades_count = 0
+        duplicates = 0
+        canceled_count = 0
 
-        csv_data = reader.to_dict('records')
-        logger.debug(f"CSV data converted to list of dictionaries. Number of records: {len(csv_data)}")
+        try:
+            chunks = pd.read_csv(file, chunksize=chunk_size)
+            for chunk_number, chunk in enumerate(chunks, start=1):
+                logger.debug(f"Processing chunk {chunk_number} with {len(chunk)} rows.")
+                
+                # Check for required columns in each chunk
+                missing_cols = required_columns - set(chunk.columns)
+                if missing_cols:
+                    logger.warning(f"Missing columns in chunk {chunk_number}: {', '.join(missing_cols)}")
+                    return Response({"error": f"Missing Columns: {', '.join(missing_cols)}"}, status=status.HTTP_400_BAD_REQUEST)
+                
+                unexpected_cols = set(chunk.columns) - required_columns
+                if unexpected_cols:
+                    logger.warning(f"Unexpected columns in chunk {chunk_number}: {', '.join(unexpected_cols)}")
+                    return Response({"error": f"Unexpected columns found: {', '.join(unexpected_cols)}"}, status=status.HTTP_400_BAD_REQUEST)
 
-        handler = BloFinHandler()
-        matcher_id = TradeIdMatcher(owner)
-        processor = CsvProcessor(handler)
-        trade_updater = TradeUpdater(owner)
+                # Convert chunk to list of dictionaries
+                csv_data = chunk.to_dict('records')
+                logger.debug(f"Chunk {chunk_number} data converted to list of dictionaries. Number of records: {len(csv_data)}")
 
-        logger.debug(f"Starting CSV processing.")
-        new_trades_count, duplicates, canceled_count = processor.process_csv_data(
-            csv_data, owner, exchange)
-        logger.debug(f"CSV processing complete. New trades count: {new_trades_count}, Duplicates: {duplicates}, Canceled count: {canceled_count}")
+                handler = BloFinHandler()
+                matcher_id = TradeIdMatcher(owner)
+                processor = CsvProcessor(handler)
+                trade_updater = TradeUpdater(owner)
 
-        live_price_fetches_count = trade_updater.count_open_trades_for_price_fetch()
-        logger.debug(f"Live price fetches count: {live_price_fetches_count}")
+                logger.debug(f"Starting CSV processing for chunk {chunk_number}.")
+                try:
+                    new_trades, chunk_duplicates, chunk_canceled = processor.process_csv_data(
+                        csv_data, owner, exchange)
+                    new_trades_count += new_trades
+                    duplicates += chunk_duplicates
+                    canceled_count += chunk_canceled
 
-        if new_trades_count > 0:
-            matcher_id.check_trade_ids()
-            trade_updater.update_trade_prices_on_upload()
-        else:
-            logger.info("No new trades added. Skipping matching process.")
+                    logger.debug(f"Chunk {chunk_number} processing complete. New trades: {new_trades}, Duplicates: {chunk_duplicates}, Canceled: {chunk_canceled}")
+
+                    live_price_fetches_count = trade_updater.count_open_trades_for_price_fetch()
+                    logger.debug(f"Live price fetches count after chunk {chunk_number}: {live_price_fetches_count}")
+
+                    if new_trades > 0:
+                        matcher_id.check_trade_ids()
+                        trade_updater.update_trade_prices_on_upload()
+                    else:
+                        logger.info(f"No new trades added in chunk {chunk_number}. Skipping matching process.")
+                except Exception as e:
+                    logger.error(f"Error processing chunk {chunk_number}: {str(e)}")
+                    return Response({"error": f"Error processing CSV file chunk {chunk_number}."}, status=status.HTTP_400_BAD_REQUEST)
+
+        except pd.errors.EmptyDataError:
+            logger.error("CSV file is empty.")
+            return Response({"error": "CSV file is empty."}, status=status.HTTP_400_BAD_REQUEST)
+        except pd.errors.ParserError:
+            logger.error("Error parsing CSV file.")
+            return Response({"error": "Error parsing CSV file."}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"General error processing CSV file: {str(e)}")
+            return Response({"error": "Error processing CSV file."}, status=status.HTTP_400_BAD_REQUEST)
+
+        end_time = time.time()  # End timing
+        elapsed_time = end_time - start_time  # Calculate the elapsed time
+        logger.debug(f"CSV upload and processing took {elapsed_time:.2f} seconds.")
 
         response_message = {
             "status": "success",
-            "message": f"{new_trades_count} new trades added, {duplicates} duplicates found,  {canceled_count} canceled trades ignored. "
+            "message": f"{new_trades_count} new trades added, {duplicates} duplicates found, {canceled_count} canceled trades ignored. ",
+            "time_taken": f"{elapsed_time:.2f} seconds"
         }
 
         logger.debug(f"Response message: {response_message}")
