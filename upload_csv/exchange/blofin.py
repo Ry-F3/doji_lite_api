@@ -245,7 +245,7 @@ class TradeUpdater:
 
                 avg_fill = trade.avg_fill
                 leverage = trade.leverage
-                long_short = trade.side
+                # long_short = trade.side
                 filled_quantity = trade.filled_quantity
 
                 try:
