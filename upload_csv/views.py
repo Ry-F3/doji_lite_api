@@ -99,7 +99,7 @@ class UploadFileView(generics.CreateAPIView):
         logger.debug(f"CSV data converted to list of dictionaries. Number of records: {len(csv_data)}")
 
         handler = BloFinHandler()
-        matcher_id = TradeIdMatcher(owner)
+        # matcher_id = TradeIdMatcher(owner)
         processor = CsvProcessor(handler)
         trade_updater = TradeUpdater(owner)
 
@@ -112,8 +112,9 @@ class UploadFileView(generics.CreateAPIView):
         logger.debug(f"Live price fetches count: {live_price_fetches_count}")
 
         if new_trades_count > 0:
-            matcher_id.check_trade_ids()
-            trade_updater.update_trade_prices_on_upload()
+            # matcher_id.check_trade_ids()
+            # trade_updater.update_trade_prices_on_upload()
+            print("test")
         else:
             logger.info("No new trades added. Skipping matching process.")
 

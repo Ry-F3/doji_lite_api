@@ -43,7 +43,7 @@ class FormattingUtils:
         if avg_fill == price:
             return '--'
 
-        if not is_open and price == Decimal('0.0') and pnl == Decimal('0.0'):
+        if is_open and price == Decimal('0.0') and pnl == Decimal('0.0'):
             return '--'
 
         return FormattingUtils.formatted_value(pnl) if pnl is not None else default
@@ -54,7 +54,7 @@ class FormattingUtils:
         if avg_fill == price:
             return '--'
 
-        if not is_open and price == Decimal('0.0') and percentage == Decimal('0.0'):
+        if  is_open and price == Decimal('0.0') and percentage == Decimal('0.0'):
             return '--'
 
         return f"{Decimal(percentage):.2f}%" if percentage is not None else default
