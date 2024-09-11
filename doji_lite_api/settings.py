@@ -125,19 +125,17 @@ MIDDLEWARE = [
 ]
 
 
-# if 'CLIENT_ORIGIN' in os.environ:
-#     CORS_ALLOWED_ORIGINS = [
-#         os.environ.get('CLIENT_ORIGIN')
-#     ]
-
-CORS_ALLOW_ALL_ORIGINS = True
-
+if 'CLIENT_ORIGIN' in os.environ:
+    CORS_ALLOWED_ORIGINS = [
+        os.environ.get('CLIENT_ORIGIN')
+    ]
 
 # CORS_ALLOW_ALL_ORIGINS = True
+
 CORS_ALLOW_CREDENTIALS = True
 
 
-# CORS_ALLOWED_ORIGIN_REGEXES = [r"^https://.*\.gitpod\.io$",]
+CORS_ALLOWED_ORIGIN_REGEXES = [r"^https://.*\.gitpod\.io$",]
 
 ROOT_URLCONF = 'doji_lite_api.urls'
 
